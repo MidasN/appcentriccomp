@@ -1,0 +1,39 @@
+
+```{r}
+library(tidyverse)
+
+```
+
+
+```{r}
+
+
+merged %>% head()
+merged[!is.na(merged$a),] %>% View() # removing NA's from the a column
+
+merged %>% dplyr::select(-RecordNo, -q) -> merged_t
+merged_t %>% head()
+
+merged_t = merged_t[!is.na(merged_t),]
+
+merged_t %>% tidyr::spread(key = a, value = Q18_1_open) %>% View
+
+
+merged_t %>% 
+  gather(key, val, Q18_1_open:Q18a) %>% 
+  group_by(a, val) %>% 
+  tally() %>% 
+  spread(val, n, fill = 0) %>% View
+
+## TODO: clean the data https://github.com/mlampros/fuzzywuzzyR
+
+
+```
+
+MDS
+
+```{r}
+
+
+
+```
