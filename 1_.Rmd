@@ -3,11 +3,13 @@ library(tidyverse)
 library(haven)
 library(stringr)
 library(reshape)
+library(magrittr)
 ```
 
 ```{r}
 
-df <- read_spss("KnowledgeWorkerSurvey_originaldata.sav")
+
+df <- read_spss("./data/KnowledgeWorkerSurvey_originaldata.sav")
 ## df %>% View()
 
 datamap <- list()
@@ -47,6 +49,10 @@ datamap$DISCO_Consolidated <- c("Chief executives, senior officials, and legisla
                                 "ICT" = 15)
 
 
+df %>% summary()
+df %>% View()
+df$RecordNo %>% summary()
+
 ## FIXME: not asssigned to the dataframe
 
 df %>% 
@@ -58,7 +64,10 @@ df %>%
   select(-(sc1_1:sc1_3)) %>% # Remove unnecessary occupation columns
   mutate_at(vars(Q3_1:Q3_4), funs(.-1)) -> df_clean# %>% # Q3_1:Q3_4, 5 means 5+ 
 
-## df %>% View()
+## TODO: ask what are fields about Q3_1:Q3_4
+## SOLUTION: probably, how much each of the device is used by the worker
+
+df_clean %>% View()
 ## grep('Occupation_Num', colnames(df))
 
 ```
@@ -83,7 +92,7 @@ Cleaned Using OpenRefine
 ```{r}
 
 # Cleaned Using OpenRefine, see changefile at DataCleaningSoftwareNames_OpenRefine.gz
-software_cleaned <- read_tsv("softwarenames_cleaned.tsv") %>% 
+software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>% 
   separate_rows(a, sep = ";") %>% 
   mutate(a = str_trim(a)) %>%
   #Remove all year versions from MS
@@ -92,6 +101,13 @@ software_cleaned <- read_tsv("softwarenames_cleaned.tsv") %>%
   mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>%
   #Remove NA
   filter(!str_detect(a2, "NA"))
+
+software_cleaned %>% View
+software_cleaned$RecordNo %>% unique() # number of respondents asked on this question
+software_cleaned$a2 %>% as.factor() %>% summary()
+
+## TODO: make Q5 a variable of a different category
+software_cleaned %>% filter(q=='Q5') %$% as.factor(a2)  %>% summary()
 
 ```
 
@@ -108,10 +124,14 @@ software_aggregated <- software_cleaned %>%
   #Group and order high to low
   group_by(a2) %>% count(a2) %>% arrange(desc(n)) %>% 
   # Show cumulative relative frequency of apps
-  ungroup() %>% mutate(relcumsum = cumsum(n/4131 * 100)) 
+  ungroup() %>% mutate(relcumsum = cumsum(n/4131 * 100))
+
+software_aggregated %>% View
+
 
 ```
 
+Chisq and t-test
 
 
 ```{r}
@@ -133,11 +153,8 @@ is.nan.data.frame <- function(x)
   do.call(cbind, lapply(x, is.nan))
 recast_soft_gen[is.nan(recast_soft_gen)] <- 0
 
+recast_soft_gen %>% View
 
-```
-
-
-```{r}
 
 # Turn data.frame into table
 soft_gen_as_table <- as.table(rbind(recast_soft_gen$`1`, recast_soft_gen$`2`))
@@ -145,35 +162,27 @@ soft_gen_as_table <- as.table(rbind(recast_soft_gen$`1`, recast_soft_gen$`2`))
 chisq.test(recast_soft_gen[1:20,])
 chisq.test(soft_gen_as_table)
 
-
 #T-test
 t.test(recast_soft_gen$`1`[1:20], recast_soft_gen$`2`[1:20])
 
 
 ```
 
+
+
+
 ```{r}
 
-# Jonas CST export
-software_cleaned <- read_tsv("softwarenames_cleaned.tsv") %>%
-  separate_rows(a, sep = ";") %>%
-  mutate(a = str_trim(a))
+## software_cleaned  %>% 
+  ## group_by(a2) %>%
+  ## count(a2) %>%
+  ## arrange(desc(n)) #%>% filter(!str_detect(a, "^MS")) %>%
 
-software_cleaned %>% View()
-summary(software_cleaned$q %>% as.factor())
-
-software_cleaned %>% 
-  mutate(a2 = str_replace(a, " [:digit:][:digit:][:digit:][:digit:]$", "")) %>%
-  mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>%
-  group_by(a2) %>%
-  count(a2) %>%
-  arrange(desc(n)) #%>% filter(!str_detect(a, "^MS"))%>%
-
-jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a")]
-
+jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
 merged <- merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo")
+merged %<>% select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
 
-merged %>% View
+# merged %>% View
 merged %>% nrow()
 
 ```
