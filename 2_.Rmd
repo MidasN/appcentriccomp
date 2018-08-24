@@ -23,6 +23,8 @@ merged %<>% dplyr::select(-RecordNo, -q)
 summary(merged$Occupation %>% as.factor())
 summary(merged$a %>% as.factor())
 
+## TODO: mds on 100/200 pieces of software OR everything with frequency above 4/5
+
 pre_dist =
   merged %>% 
   gather(key, val, Occupation) %>% 
@@ -31,6 +33,8 @@ pre_dist =
   spread(val, n, fill = 0)
 
 ## TODO: clean the data https://github.com/mlampros/fuzzywuzzyR
+
+## TODO: use 1-level categorisation of occupation > Look at DISCO08 and consolidate all occupations to be just the top three 
 
 
 ```
