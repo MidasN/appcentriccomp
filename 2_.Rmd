@@ -10,7 +10,7 @@ Q4-Q7 are questions regarding soft on different devices
 
 ```{r}
 
-
+## merged %>% View()
 
 ## merged %>% head()
 merged = merged[!is.na(merged$a2),] # removing NA's from the a column

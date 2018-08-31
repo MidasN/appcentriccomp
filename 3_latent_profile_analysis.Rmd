@@ -1,0 +1,277 @@
+```{r}
+
+library(tidyverse)
+library(magrittr)
+library(tidyLPA)
+
+library(haven)
+library(stringr)
+library(reshape)
+
+```
+
+
+```{r}
+
+
+df <- read_spss("./data/KnowledgeWorkerSurvey_originaldata.sav")
+
+datamap <- list()
+datamap$DISCO <- c("Chief executives, senior officials, and legislators" = 1,
+                   "Administrative and commercial managers" = 2,
+                   "Production and specialised services managers" = 3,
+                   "Hospitality, retail and other services managers" = 4,
+                   "Science and engineering professionals" = 5,
+                   "Health professionals" = 6,
+                   "Teaching professionals" = 7,
+                   "Business and administration professionals" = 8,
+                   "ICT professionals" = 9,
+                   "Legal, social, and cultural professionals" = 10,
+                   "Science and engineering, shipping and aviation associate professionals" = 11,
+                   "Health associate professionals" = 12,
+                   "Business, economics, and administration associate professionals" = 13,
+                   "Legal, social, and cultural associated professionals" = 14,
+                   "ICT technicians" = 15)
+
+
+## General management - two categories?
+## Just forget about consolidated
+
+
+
+df %>% 
+  filter(status == 1) %>% # Filter to only included completed surveys
+  select(-(sc1_4:sc1_11_43)) %>% # Delete screen-out occupation columns 
+  mutate(Occupation_Num = rowSums(select(., sc1_1:sc1_3), na.rm = T), # Merge columns of occupations
+         Occupation_DISCO = names(datamap$DISCO[Occupation_Num])) %>%  # English labels for DISCO 2008 Occupations
+         # Merged sector labels for Occupations
+  select(-(sc1_1:sc1_3)) %>% # Remove unnecessary occupation columns
+  mutate_at(vars(Q3_1:Q3_4), funs(.-1)) -> df_clean# %>% # Q3_1:Q3_4, 5 means 5+ 
+
+
+
+```
+
+
+
+
+Manually I excluded string categories - and in df_clmns_excluded those are not presented
+
+```{r}
+
+## Shifts??
+# Q18_1_open:Q18_a - job title + tasks description
+# Q21_1_open:Q22 - previous job titles + tasks description
+
+### manualy choosing non-string columns
+## write_csv("~/projects/appcentriccomp/data/columns.csv", x = data.frame(colnames = colnames(df),
+##            status = "")
+##           )
+
+
+## clmn = read_csv("~/projects/appcentriccomp/data/columns.csv")
+
+
+# clmn %>% View()
+
+df_clean %>% View()
+
+## summary(clmn$status == "-")
+## clmn$colnames[is.na(clmn$status)]
+
+## df_clmns_excluded = df_clean[,colnames(df_clean) %in%
+## clmn$colnames[is.na(clmn$status)]]
+
+
+## df_clmns_excluded %>% View
+
+```
+
+Here I am excluding timing columns
+
+
+```{r}
+
+df_clean = df_clean %>% dplyr::select(-c(page_pSC1_timing:tot_time))
+
+
+df_clean %>% nrow()
+
+na_vector = apply(df_clean, 2, function(x){
+
+  sum(is.na(x))
+
+})
+
+## na_vector[na_vector == 0]
+
+df_final = df_clean %>% dplyr::select(
+                                      names(na_vector[na_vector == 0]),
+                                      -Occupation_Num, -status, -Occupation_DISCO,
+                                      -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
+                                      -c(Q21_1_open, Q22),
+                                      -c(Q18_1_open, Q18a),
+                                       -c(comments, Q4, Q5, Q6, Q7))
+
+df_final %>% View()
+
+
+```
+
+
+Get the cleaned version of software used
+UPD: Avoid using soft for profiling
+
+```{r}
+
+## software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>% 
+##   separate_rows(a, sep = ";") %>% 
+##   mutate(a = str_trim(a)) %>%
+##   #Remove all year versions from MS
+##   mutate(a2 = str_replace(a, " [:digit:][:digit:][:digit:][:digit:]$", "")) %>%
+##   #Collapse SAP versions
+##   mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>%
+##   #Remove NA
+##   filter(!str_detect(a2, "NA")) %>%
+##   dplyr::select(-a) %>%
+##   dplyr::rename(a = a2)
+
+
+## View(software_cleaned)
+
+## Transform to each column represents variable view
+
+
+#software_cleaned %>% tidyr::spread(key = q, value = a) %>% View()
+
+## software_cleaned %>%
+##   group_by(q, RecordNo) %>%
+##   mutate(ind = row_number()) %>% 
+##   spread(q, a, fill = "Nothing") %>%
+##   select(-ind) %>% 
+##   View()
+
+```
+
+
+
+
+Based on the info about NAs in the following chunk I updated columns.csv
+UPD: not necessary right now 
+
+```{r}
+
+
+# df_clmns_excluded[complete.cases(df_clmns_excluded), ]
+
+## here I am looking for the columns with the maximum NA number there
+na_vector = apply(df_clmns_excluded, 2, function(x){
+
+  sum(is.na(x))
+
+})
+
+sort(na_vector, decreasing=T)
+
+# Q24 - what industry do you work in
+## FIXME: set not_mentioned
+# Q21 - what was your last (main) job titled
+# Q23 Did you work in the public or private sector
+# Q85_4_5: Mobile phone: other
+# Q85_4_6: Mobile phone: Blackbery OS
+
+## Less than 150 NAs:
+# Q20 - what industry do you work in
+# Q18 - what is your position/job title
+# Q19 - do you work in a public/private sector
+
+na_vector[na_vector == na_vector %>% max()]
+
+
+to_kick_off = data.frame(
+           var_names = names(na_vector),
+           na_quantity = na_vector) %>%
+  dplyr::arrange(desc(na_quantity))
+
+
+clmn$status[clmn$colnames %in% to_kick_off$var_names[to_kick_off$na_quantity > 0]] = "-"
+
+write_csv("~/projects/appcentriccomp/data/columns_2.csv", x = clmn)
+
+
+```
+
+
+
+```{r}
+
+
+## clmn = read_csv("~/projects/appcentriccomp/data/columns_2.csv")
+
+
+## ## summary(clmn$status == "-") clmn$colnames[is.na(clmn$status)]
+
+## df_clmns_excluded = df[,colnames(df) %in%
+## clmn$colnames[is.na(clmn$status)]]
+
+
+## df_final = df_clmns_excluded[complete.cases(df_clmns_excluded), ]
+
+```
+
+Reordering variables to make values semi-continious
+
+```{r}
+
+df$Q3_1
+
+# df_final$Q9[df_final$Q9 == 4] %>% class()
+
+df_final$Q9[df_final$Q9 == 4] = 0
+df_final$Q10[df_final$Q10 == 4] = 0
+df_final$Q11[df_final$Q11 == 4] = 0
+df_final$Q12[df_final$Q12 == 4] = 0
+df_final$Q13[df_final$Q13 == 4] = 0
+df_final$Q14[df_final$Q14 == 4] = 0
+df_final$Q15[df_final$Q15 == 4] = 0
+df_final$Q16[df_final$Q16 == 4] = 0
+
+
+df_final$Q17_R = 6 - df_final$Q17
+
+
+
+```
+
+LPA
+TODO: feed more variables (excluding occupation) to the algorithm
+TODO: CLEAN CODE
+
+```{r}
+
+
+# d = df_final %<>% dplyr::select(-c(weight))
+d = df_final
+# d %>% nrow()
+
+colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))]
+colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10, 25)]
+
+m3 <- estimate_profiles(d, 
+                        colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10)],
+                        n_profiles = 3, 
+                        model = 2,
+                        return_orig_df = T)
+
+m3[,c(colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10, 25)], "RecordNo")] %>% View()
+
+
+# m3$profile
+
+plot_profiles(m3, to_center = TRUE)
+
+
+# m3$
+
+
+```

@@ -33,7 +33,8 @@ datamap$DISCO <- c("Chief executives, senior officials, and legislators" = 1,
                    "ICT technicians" = 15)
 
 
-## FIXME: General management - two categories?
+## General management - two categories?
+## SOLUTION: just skip this categorisation
 
 datamap$DISCO_Consolidated <- c("Chief executives, senior officials, and legislators" = 1,
                                 "General management" = 2,

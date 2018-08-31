@@ -49,11 +49,10 @@ datamap$DISCO_Consolidated <- c("Chief executives, senior officials, and legisla
                                 "ICT" = 15)
 
 
-df %>% summary()
-df %>% View()
-df$RecordNo %>% summary()
+## df %>% summary()
+## df %>% View()
+## df$RecordNo %>% summary()
 
-## FIXME: not asssigned to the dataframe
 
 df %>% 
   filter(status == 1) %>% # Filter to only included completed surveys
@@ -67,7 +66,7 @@ df %>%
 ## TODO: ask what are fields about Q3_1:Q3_4
 ## SOLUTION: probably, how much each of the device is used by the worker
 
-df_clean %>% View()
+## df_clean %>% View()
 ## grep('Occupation_Num', colnames(df))
 
 ```
@@ -102,12 +101,12 @@ software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>%
   #Remove NA
   filter(!str_detect(a2, "NA"))
 
-software_cleaned %>% View
-software_cleaned$RecordNo %>% unique() # number of respondents asked on this question
-software_cleaned$a2 %>% as.factor() %>% summary()
+## software_cleaned %>% View
+## software_cleaned$RecordNo %>% unique() # number of respondents asked on this question
+## software_cleaned$a2 %>% as.factor() %>% summary()
 
 ## TODO: make Q5 a variable of a different category
-software_cleaned %>% filter(q=='Q5') %$% as.factor(a2)  %>% summary()
+software_cleaned %>% filter(q=='Q5') %$% as.factor(a2)  %>% summary() #
 
 ```
 
@@ -126,7 +125,7 @@ software_aggregated <- software_cleaned %>%
   # Show cumulative relative frequency of apps
   ungroup() %>% mutate(relcumsum = cumsum(n/4131 * 100))
 
-software_aggregated %>% View
+# software_aggregated %>% View
 
 
 ```
