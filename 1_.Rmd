@@ -1,16 +1,17 @@
 ```{r}
+
 library(tidyverse)
 library(haven)
 library(stringr)
 library(reshape)
 library(magrittr)
+
 ```
 
 ```{r}
 
 
 df <- read_spss("./data/KnowledgeWorkerSurvey_originaldata.sav")
-## df %>% View()
 
 datamap <- list()
 datamap$DISCO <- c("Chief executives, senior officials, and legislators" = 1,
@@ -30,7 +31,7 @@ datamap$DISCO <- c("Chief executives, senior officials, and legislators" = 1,
                    "ICT technicians" = 15)
 
 
-## FIXME: General management - two categories?
+# Forget about consolidated for now
 
 datamap$DISCO_Consolidated <- c("Chief executives, senior officials, and legislators" = 1,
                                 "General management" = 2,
@@ -48,140 +49,62 @@ datamap$DISCO_Consolidated <- c("Chief executives, senior officials, and legisla
                                 "Legal, social, and cultural" = 14,
                                 "ICT" = 15)
 
-
-## df %>% summary()
-## df %>% View()
-## df$RecordNo %>% summary()
+```
 
 
-df %>% 
+Only included completed surveys
+
+```{r}
+
+df_clean = df %>%
   filter(status == 1) %>% # Filter to only included completed surveys
   select(-(sc1_4:sc1_11_43)) %>% # Delete screen-out occupation columns 
   mutate(Occupation_Num = rowSums(select(., sc1_1:sc1_3), na.rm = T), # Merge columns of occupations
          Occupation_DISCO = names(datamap$DISCO[Occupation_Num]), # English labels for DISCO 2008 Occupations
          Occupation = names(datamap$DISCO_Consolidated[Occupation_Num])) %>% # Merged sector labels for Occupations
   select(-(sc1_1:sc1_3)) %>% # Remove unnecessary occupation columns
-  mutate_at(vars(Q3_1:Q3_4), funs(.-1)) -> df_clean# %>% # Q3_1:Q3_4, 5 means 5+ 
+  mutate_at(vars(Q3_1:Q3_4), funs(.-1)) # Q3_1:Q3_4, 5 means 5+ 
 
-## TODO: ask what are fields about Q3_1:Q3_4
-## SOLUTION: probably, how much each of the device is used by the worker
-
-## df_clean %>% View()
-## grep('Occupation_Num', colnames(df))
-
-```
-
-Export Software Names for Cleaning
-
-```{r}
-
-## df_clean %<>% 
-##   select(RecordNo, Q4:Q7) %>% 
-##   gather(q, a, -RecordNo) %>% 
-##   separate_rows(a, sep = ";") %>%
-##   mutate(a = str_trim(.$a))
-## %>%  write_csv("softwarenames.csv")
+# fields Q3_1:Q3_4
+# SOLUTION: probably, how much each of the device is used by the worker
 
 
 ```
 
-Cleaned Using OpenRefine
+
+Precleaning Using OpenRefine
 
 
 ```{r}
 
 # Cleaned Using OpenRefine, see changefile at DataCleaningSoftwareNames_OpenRefine.gz
-software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>% 
-  separate_rows(a, sep = ";") %>% 
-  mutate(a = str_trim(a)) %>%
-  #Remove all year versions from MS
-  mutate(a2 = str_replace(a, " [:digit:][:digit:][:digit:][:digit:]$", "")) %>%
-  #Collapse SAP versions
-  mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>%
-  #Remove NA
+software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>%
+  separate_rows(a, sep = ";") %>%
+  mutate(a = str_trim(a)) %>%  #Remove all year versions from MS
+  mutate(a2 = str_replace(a, " [:digit:][:digit:][:digit:][:digit:]$", "")) %>% #Remove all year versions from MS
+  mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>% #Remove NA
   filter(!str_detect(a2, "NA"))
 
-## software_cleaned %>% View
-## software_cleaned$RecordNo %>% unique() # number of respondents asked on this question
-## software_cleaned$a2 %>% as.factor() %>% summary()
-
-## TODO: make Q5 a variable of a different category
-software_cleaned %>% filter(q=='Q5') %$% as.factor(a2)  %>% summary() #
-
 ```
 
+Aggregated Numbers
 
 ```{r}
 
-#How many apps are there that are mentioned more than once: 431
-table(software_cleaned$a)[(table(software_cleaned$a) > 1)] %>% length
-
-#How many unique applications are mentioned: 1066
-unique(software_cleaned$a) %>% length
-
-software_aggregated <- software_cleaned %>% 
-  #Group and order high to low
-  group_by(a2) %>% count(a2) %>% arrange(desc(n)) %>% 
-  # Show cumulative relative frequency of apps
-  ungroup() %>% mutate(relcumsum = cumsum(n/4131 * 100))
-
-# software_aggregated %>% View
-
-
-```
-
-Chisq and t-test
-
-
-```{r}
-
-# Create new data frame with gender and app data
-gender <- df_clean[, c("RecordNo", "gender")]
-software_and_gender <- merge(x = software_cleaned, y = gender, by="RecordNo") %>%
-  group_by(gender) %>% count(a) %>% arrange(desc(n)) 
-
-# reshape the df so that apps, female, and male are the variables 
-recast_soft_gen <- cast(software_and_gender, a ~ gender, mean, value = "n")
-# Change row names to the app names
-rownames(recast_soft_gen) <- recast_soft_gen[,1]
-# Remove app variable from dataframe
-recast_soft_gen <- recast_soft_gen[,-1]
-
-# Change all NaN to 0
-is.nan.data.frame <- function(x)
-  do.call(cbind, lapply(x, is.nan))
-recast_soft_gen[is.nan(recast_soft_gen)] <- 0
-
-recast_soft_gen %>% View
-
-
-# Turn data.frame into table
-soft_gen_as_table <- as.table(rbind(recast_soft_gen$`1`, recast_soft_gen$`2`))
-#ChiSquare test
-chisq.test(recast_soft_gen[1:20,])
-chisq.test(soft_gen_as_table)
-
-#T-test
-t.test(recast_soft_gen$`1`[1:20], recast_soft_gen$`2`[1:20])
-
+software_aggregated <- software_cleaned %>% #Group and order high to low
+  group_by(a2) %>% count(a2) %>% arrange(desc(n)) %>% # Show cumulative relative frequency of apps
+  ungroup() %>%
+  mutate(relcumsum = cumsum(n / 4131 * 100))
 
 ```
 
 
 
-
 ```{r}
-
-## software_cleaned  %>% 
-  ## group_by(a2) %>%
-  ## count(a2) %>%
-  ## arrange(desc(n)) #%>% filter(!str_detect(a, "^MS")) %>%
 
 jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
-merged <- merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo")
-merged %<>% select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
-
-# merged %>% View
-merged %>% nrow()
+merged <- merge(x = software_cleaned, y = jobtitleanddescription,
+                by = "RecordNo") %>%
+  select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
 
 ```

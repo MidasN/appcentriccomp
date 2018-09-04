@@ -1,41 +1,64 @@
 
 ```{r}
+
 library(tidyverse)
+library(magrittr)
 library(ggpubr)
 library(ggplot2)
 
 ```
 
 Q4-Q7 are questions regarding soft on different devices
+DF with all the software items
 
 ```{r}
 
-## merged %>% View()
-
-## merged %>% head()
-merged = merged[!is.na(merged$a2),] # removing NA's from the a column
-merged %<>% dplyr::rename(a = a2)
-
-## FIXME: loosing the information about the device used
-merged %<>% dplyr::select(-RecordNo, -q)
-# merged %>% tidyr::spread(key = a, value = Occupation) %>% View
-
-summary(merged$Occupation %>% as.factor())
-summary(merged$a %>% as.factor())
-
-## TODO: mds on 100/200 pieces of software OR everything with frequency above 4/5
+merged = merged[!is.na(merged$a2), ] %>% # removing NA's from the a column
+  dplyr::rename(a = a2) %>% # FIXME: loosing the information about the device used
+  dplyr::select(-RecordNo, -q)
 
 pre_dist =
-  merged %>% 
-  gather(key, val, Occupation) %>% 
-  group_by(a, val) %>% 
-  tally() %>% 
+  merged %>%
+  gather(key, val, Occupation) %>%
+  group_by(a, val) %>%
+  tally() %>%
   spread(val, n, fill = 0)
 
-## TODO: clean the data https://github.com/mlampros/fuzzywuzzyR
+# TODO: clean the data https://github.com/mlampros/fuzzywuzzyR
 
-## TODO: use 1-level categorisation of occupation > Look at DISCO08 and consolidate all occupations to be just the top three 
+```
 
+mds on 100/200 pieces of software OR everything with frequency above 4/5
+Using software_aggregated (sorted by items frequencies) for choosing labels
+
+```{r}
+
+
+pre_dist_100 =
+  merged %>%
+  dplyr::filter(a %in% software_aggregated$a2[1:100]) %>%
+  gather(key, val, Occupation) %>%
+  group_by(a, val) %>%
+  tally() %>%
+  spread(val, n, fill = 0)
+
+pre_dist_200 =
+  merged %>%
+  dplyr::filter(a %in% software_aggregated$a2[1:200]) %>%
+  gather(key, val, Occupation) %>%
+  group_by(a, val) %>%
+  tally() %>%
+  spread(val, n, fill = 0)
+
+
+```
+
+
+Labels to put on the map
+
+```{r}
+
+labels_to_select = software_aggregated$a2[1:115]
 
 ```
 
@@ -43,66 +66,17 @@ MDS
 
 ```{r}
 
+set.seed(33)
 
-## d = dist(pre_dist[,-1]) # euclidean distances between the rows
-## d = dist(pre_dist[,-1], method = 'maximum' ) # euclidean distances between the rows
-## d = dist(pre_dist[,-1], method = 'manhattan' ) # euclidean distances between the rows
-## d = dist(pre_dist[,-1], method = 'minkowski' ) # euclidean distances between the rows
+source("./functions.R")
 
-d = dist(pre_dist[,-1], method = 'canberra' ) # euclidean distances between the rows
-## d = dist(pre_dist[,-1], method = 'binary' ) # euclidean distances between the rows
+with(dev.new(), mds_n_plot(pre_dist, "canberra", labels_to_select, 6))
 
-fit = cmdscale(d, k=2) # k is the number of dim
+with(dev.new(), mds_n_plot(pre_dist_100, "canberra", labels_to_select, 6))
 
-
-fit_tb = fit %>% as_tibble()
-colnames(fit_tb) <- c("Dim.1", "Dim.2")
-
-
-## library(MASS)
-## fit <- isoMDS(d, k=2) # k is the number of dim
-## fit # view results
-
-# plot solution 
-x <- fit$points[,1]
-y <- fit$points[,2]
-
-
-labels_to_select = software_aggregated$a2[1:115]
-
-# Plot MDS
-ggscatter(fit_tb, x = "Dim.1", y = "Dim.2", 
-          label = pre_dist$a,
-          label.select = labels_to_select,
-          size = 1,
-          repel = TRUE)
+with(dev.new(), mds_n_plot(pre_dist_200, "canberra", labels_to_select, 6))
 
 
 ```
 
-```{r}
-
-
-# K-means clustering
-clust = kmeans(fit_tb, 6)$cluster %>% as.factor()
-fit_tb = fit_tb %>% mutate(groups = clust)
-# Plot and color by groups
-ggscatter(fit_tb,
-          x = "Dim.1", y = "Dim.2", 
-          label = pre_dist$a,
-          label.select = labels_to_select,
-          color = "groups",
-          star.plot=TRUE,
-          palette = "jco",
-          size = 1, 
-          ellipse = TRUE,
-          ellipse.type = "convex",
-          repel = TRUE) +
-          geom_hline(yintercept=0, color = "red", size = 2)
-
-
-```
-
-TODO: Feed more variables to MDS (aggregation of categorical? different mapping?)
 TODO: Making multiple tests between professional clusters (possible?)
-TODO: Latent Profile Analysis - making user' profiles -> statistical tests

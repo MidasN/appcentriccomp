@@ -1,6 +1,5 @@
 ```{r}
 
-
 m3 %>% class()
 m3 %>% View()
 
@@ -25,14 +24,11 @@ merged %>% View()
 
 
 
-## nrow(merged)
 merged$RecordNo %<>% as.numeric()
 profiles$RecordNo %<>% as.numeric()
 
-## Checking
+# Checking
 anti_join(merged, profiles, by = "RecordNo")
-
-
 merged_with_profiles = inner_join(merged, profiles, by = "RecordNo")
 
 
@@ -82,14 +78,14 @@ occupation_profiling_dist = inner_join(pre_dist, profiling_dist, by = "a")
 
 
 
-## FIXME: loosing the information about the device used
+# FIXME: loosing the information about the device used
 ## merged %<>% dplyr::select(-RecordNo, -q)
 # merged %>% tidyr::spread(key = a, value = Occupation) %>% View
 
 ## summary(merged$Occupation %>% as.factor())
 ## summary(merged$a %>% as.factor())
 
-## TODO: mds on 100/200 pieces of software OR everything with frequency above 4/5
+# TODO: mds on 100/200 pieces of software OR everything with frequency above 4/5
 
 ## pre_dist =
 ##   merged %>% 
