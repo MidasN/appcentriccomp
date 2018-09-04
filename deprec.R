@@ -94,3 +94,17 @@ df_clean %>% View()
 
 
 ## df_clmns_excluded %>% View
+
+
+na_vector[na_vector == na_vector %>% max()]
+
+
+to_kick_off = data.frame(
+           var_names = names(na_vector),
+           na_quantity = na_vector) %>%
+  dplyr::arrange(desc(na_quantity))
+
+
+clmn$status[clmn$colnames %in% to_kick_off$var_names[to_kick_off$na_quantity > 0]] = "-"
+
+write_csv("~/projects/appcentriccomp/data/columns_2.csv", x = clmn)

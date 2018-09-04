@@ -29,3 +29,15 @@ mds_n_plot <- function(pre_dist, method, labels_to_select, clust_n){
 
 
 }
+
+explore_model_fit <- function(df, n_profiles_range = 1:6, model_names = c("EII", "VVI", "EEE", "VVV")) {
+    x = mclustBIC(df, G = n_profiles_range, modelNames = model_names)
+    y = x %>%
+        as.data.frame.matrix() %>%
+        rownames_to_column("n_profiles") %>%
+        dplyr::rename(`Constrained variance, fixed covariance` = EII,
+                      `Freed variance, fixed covariance` = VVI,
+                      `Constrained variance, constrained covariance` = EEE,
+                      `Freed variance, freed covariance` = VVV)
+    y
+}

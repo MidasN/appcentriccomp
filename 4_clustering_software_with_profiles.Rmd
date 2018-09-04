@@ -1,7 +1,16 @@
+
 ```{r}
 
-m3 %>% class()
-m3 %>% View()
+library(tidyverse)
+library(magrittr)
+library(gridExtra)
+
+
+```
+
+Extracting profile and prob associated with the person
+
+```{r}
 
 profiles = m3  %>% dplyr::select(RecordNo, profile, posterior_prob)
 
@@ -12,8 +21,9 @@ profiles = m3  %>% dplyr::select(RecordNo, profile, posterior_prob)
 ```{r}
 
 
-jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
-merged <- merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo")
+jobtitleanddescription = df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
+
+merged = merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo")
 merged %<>% select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
 
 
@@ -310,8 +320,6 @@ plot_cluster=function(data, var_cluster, palette)
 plot_k=plot_cluster(d_tsne_1_original, "cl_kmeans", "Accent")  
 plot_h=plot_cluster(d_tsne_1_original, "cl_hierarchical", "Set1")
 
-## and finally: putting the plots side by side with gridExtra lib...
-library(gridExtra)  
 grid.arrange(plot_k, plot_h,  ncol=2)  
 
 

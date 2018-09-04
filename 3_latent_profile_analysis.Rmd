@@ -4,39 +4,20 @@ library(tidyverse)
 library(magrittr)
 library(tidyLPA)
 
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+source("./functions.R")
 
 ```
 
-
-Manually I excluded string categories - and in df_clmns_excluded those are not presented
+TODO: Shifts
 
 ```{r}
 
-## Shifts??
 # Q18_1_open:Q18_a - job title + tasks description
 # Q21_1_open:Q22 - previous job titles + tasks description
-
-## manualy choosing non-string columns
-## write_csv("~/projects/appcentriccomp/data/columns.csv", x = data.frame(colnames = colnames(df),
-##            status = "")
-##           )
-
-
-## clmn = read_csv("~/projects/appcentriccomp/data/columns.csv")
-
-
-# clmn %>% View()
-
-df_clean %>% View()
-
-## summary(clmn$status == "-")
-## clmn$colnames[is.na(clmn$status)]
-
-## df_clmns_excluded = df_clean[,colnames(df_clean) %in%
-## clmn$colnames[is.na(clmn$status)]]
-
-
-## df_clmns_excluded %>% View
 
 ```
 
@@ -45,69 +26,30 @@ Here I am excluding timing columns
 
 ```{r}
 
-df_clean = df_clean %>% dplyr::select(-c(page_pSC1_timing:tot_time))
+df_clean %<>%
+  dplyr::select(-c(page_pSC1_timing:tot_time))
 
-
-df_clean %>% nrow()
-
+# df_clean %>% nrow
 na_vector = apply(df_clean, 2, function(x){
 
   sum(is.na(x))
 
 })
 
-## na_vector[na_vector == 0]
-
+na_vector[na_vector > 0] # which variables produce most of the NAs
 df_final = df_clean %>% dplyr::select(
                                       names(na_vector[na_vector == 0]),
                                       -Occupation_Num, -status, -Occupation_DISCO,
                                       -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
                                       -c(Q21_1_open, Q22),
                                       -c(Q18_1_open, Q18a),
-                                       -c(comments, Q4, Q5, Q6, Q7))
-
-df_final %>% View()
+                                      -c(comments, Q4, Q5, Q6, Q7))
 
 
-```
-
-
-Get the cleaned version of software used
-UPD: Avoid using soft for profiling
-
-```{r}
-
-## software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>% 
-##   separate_rows(a, sep = ";") %>% 
-##   mutate(a = str_trim(a)) %>%
-##   #Remove all year versions from MS
-##   mutate(a2 = str_replace(a, " [:digit:][:digit:][:digit:][:digit:]$", "")) %>%
-##   #Collapse SAP versions
-##   mutate(a2 = str_replace(a2, "SAP.*", "SAP")) %>%
-##   #Remove NA
-##   filter(!str_detect(a2, "NA")) %>%
-##   dplyr::select(-a) %>%
-##   dplyr::rename(a = a2)
-
-
-## View(software_cleaned)
-
-## Transform to each column represents variable view
-
-
-#software_cleaned %>% tidyr::spread(key = q, value = a) %>% View()
-
-## software_cleaned %>%
-##   group_by(q, RecordNo) %>%
-##   mutate(ind = row_number()) %>% 
-##   spread(q, a, fill = "Nothing") %>%
-##   select(-ind) %>% 
-##   View()
+df_final %>% nrow
+df_final %>% ncol
 
 ```
-
-
-
 
 Based on the info about NAs in the following chunk I updated columns.csv
 UPD: not necessary right now 
@@ -115,70 +57,25 @@ UPD: not necessary right now
 ```{r}
 
 
-# df_clmns_excluded[complete.cases(df_clmns_excluded), ]
-
-## here I am looking for the columns with the maximum NA number there
-na_vector = apply(df_clmns_excluded, 2, function(x){
-
-  sum(is.na(x))
-
-})
-
-sort(na_vector, decreasing=T)
-
 # Q24 - what industry do you work in
-## FIXME: set not_mentioned
+# FIXME: set not_mentioned
 # Q21 - what was your last (main) job titled
 # Q23 Did you work in the public or private sector
 # Q85_4_5: Mobile phone: other
 # Q85_4_6: Mobile phone: Blackbery OS
 
-## Less than 150 NAs:
+# Less than 150 NAs:
 # Q20 - what industry do you work in
 # Q18 - what is your position/job title
 # Q19 - do you work in a public/private sector
 
-na_vector[na_vector == na_vector %>% max()]
-
-
-to_kick_off = data.frame(
-           var_names = names(na_vector),
-           na_quantity = na_vector) %>%
-  dplyr::arrange(desc(na_quantity))
-
-
-clmn$status[clmn$colnames %in% to_kick_off$var_names[to_kick_off$na_quantity > 0]] = "-"
-
-write_csv("~/projects/appcentriccomp/data/columns_2.csv", x = clmn)
-
 
 ```
 
+Reordering variables to make values semi-continuous
 
 
 ```{r}
-
-
-## clmn = read_csv("~/projects/appcentriccomp/data/columns_2.csv")
-
-
-## ## summary(clmn$status == "-") clmn$colnames[is.na(clmn$status)]
-
-## df_clmns_excluded = df[,colnames(df) %in%
-## clmn$colnames[is.na(clmn$status)]]
-
-
-## df_final = df_clmns_excluded[complete.cases(df_clmns_excluded), ]
-
-```
-
-Reordering variables to make values semi-continious
-
-```{r}
-
-df$Q3_1
-
-# df_final$Q9[df_final$Q9 == 4] %>% class()
 
 df_final$Q9[df_final$Q9 == 4] = 0
 df_final$Q10[df_final$Q10 == 4] = 0
@@ -188,7 +85,6 @@ df_final$Q13[df_final$Q13 == 4] = 0
 df_final$Q14[df_final$Q14 == 4] = 0
 df_final$Q15[df_final$Q15 == 4] = 0
 df_final$Q16[df_final$Q16 == 4] = 0
-
 
 df_final$Q17_R = 6 - df_final$Q17
 
@@ -200,31 +96,94 @@ LPA
 TODO: feed more variables (excluding occupation) to the algorithm
 TODO: CLEAN CODE
 
+
+ ```{r}
+
+# Q17 - employment status, using Reversed Ordered Q17_R instead
+
+d = df_final %<>% dplyr::select(-c(weight))
+colnames_lpa = colnames(d)[!(colnames(d) %in% c("RecordNo",
+                                                "Q17",
+                                                "Occupation",
+                                                "profile_education",
+                                                "profile_age2", "profile_age1",
+                                                "region"))]
+
+
+```
+
+Number of profiles to choose - analytically - less BIC is better
+
 ```{r}
 
-
-# d = df_final %<>% dplyr::select(-c(weight))
-d = df_final
-# d %>% nrow()
-
-colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))]
-colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10, 25)]
-
-m3 <- estimate_profiles(d, 
-                        colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10)],
-                        n_profiles = 3, 
-                        model = 2,
-                        return_orig_df = T)
-
-m3[,c(colnames(d)[!(colnames(d) %in% c("RecordNo", "Q17"))][c(1:10, 25)], "RecordNo")] %>% View()
+fit_output = explore_model_fit(d %>% dplyr::select(colnames_lpa),
+                               n_profiles_range = 1:6)
 
 
-# m3$profile
+# fit_output %>% View
 
-plot_profiles(m3, to_center = TRUE)
+```
+
+Number of profiles to choose - visually
+
+```{r}
+
+to_plot = fit_output %>%
+  gather(`Covariance matrix structure`, val, -n_profiles) %>% 
+  mutate(`Covariance matrix structure` = as.factor(`Covariance matrix structure`),
+         val = abs(val)) # this is to make the BIC values positive (to align with more common formula / interpretation of BIC)
 
 
-# m3$
+to_plot$`Covariance matrix structure` = fct_relevel(to_plot$`Covariance matrix structure`,
+                                                    "Constrained variance, fixed covariance",
+                                                    "Freed variance, fixed covariance",
+                                                    "Constrained variance, constrained covariance",
+                                                    "Freed variance, freed covariance")
+
+# Based on plot, either 3 or 4 profiles should be setted up
+
+ggplot(to_plot,
+       aes(x = n_profiles, y = val, color = `Covariance matrix structure`, group = `Covariance matrix structure`)) +
+  geom_line() +
+  geom_point() +
+  ylab("BIC (smaller value is better)") +
+  theme_ipsum_rc()
+
+
+```
+
+TODO: exclude binary variables from LPA
+
+Best on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2
+
+
+```{r}
+
+m3 = estimate_profiles(d,
+                       colnames_lpa,
+                       n_profiles = 3, 
+                       model = 2,
+                       return_orig_df = T)
+
+
+```
+
+
+Plotting 
+
+
+```{r}
+
+avoid_lpa = c("RecordNo",
+               "Q17",
+               "Occupation",
+               "profile_education",
+               "profile_age2", "profile_age1", "region")
+
+# RColorBrewer::brewer.pal(n, pal)
+# https://www.r-bloggers.com/how-to-expand-color-palette-with-ggplot-and-rcolorbrewer/
+
+plot_profiles(m3[, !(colnames(m3_full) %in% avoid_lpa)])
 
 
 ```
