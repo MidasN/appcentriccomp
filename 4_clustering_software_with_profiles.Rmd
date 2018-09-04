@@ -8,6 +8,8 @@ library(gridExtra)
 
 ```
 
+TODO: CLEAN 4th Rmd
+
 Extracting profile and prob associated with the person
 
 ```{r}
@@ -17,41 +19,59 @@ profiles = m3  %>% dplyr::select(RecordNo, profile, posterior_prob)
 ```
 
 
-
 ```{r}
 
 
 jobtitleanddescription = df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
 
-merged = merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo")
-merged %<>% select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
-
-
-merged = merged[!is.na(merged$a2),] # removing NA's from the a column
-merged %<>% dplyr::rename(a = a2)
-
-merged %>% View()
-
-
+merged = merge(x = software_cleaned, y = jobtitleanddescription, by= "RecordNo") %>%
+  select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
+merged = merged[!is.na(merged$a2),] %>% # removing NA's from the a column
+  dplyr::rename(a = a2)
 
 merged$RecordNo %<>% as.numeric()
 profiles$RecordNo %<>% as.numeric()
 
-# Checking
+# merged %>% View()
+
+```
+
+TODO: make the same trick with education instead/with profession
+
+```{r}
+
+
+education_df = df_clean[, c("RecordNo", "profile_education")]
+education_df$RecordNo %<>% as.numeric()
+
+education_software = inner_join(software_cleaned, education_df, by= "RecordNo")
+
+education_software = education_software[!is.na(education_software$a2),] %>% # removing NA's from the a column
+  dplyr::select(-a) %>%
+  dplyr::rename(a = a2)
+
+
+```
+
+Checking for NAs
+
+```{r}
+
+
 anti_join(merged, profiles, by = "RecordNo")
 merged_with_profiles = inner_join(merged, profiles, by = "RecordNo")
 
 
-
-## mered_with_prfiles = merged %>%
-##   group_by(q, RecordNo) %>%
-##   mutate(ind = row_number()) %>% 
-##   spread(q, a, fill = "Nothing") %>%
-##   select(-ind) %>% 
-##   View()
+```
 
 
-pre_dist =
+```{r}
+
+
+df_clean$profile_education %>% as.factor() %>% summary()
+df_clean$Occupation %>% as.factor() %>% summary()
+
+pre_dist_education =
   merged %>% 
   gather(key, val, Occupation) %>%
   group_by(a, val) %>% 
@@ -68,15 +88,12 @@ nrow(pre_dist)
 
 
 
-profiling_dist = merged_with_profiles %>% dplyr::select(profile, a, posterior_prob) %>% 
+profiling_dist = merged_with_profiles %>%
+  dplyr::select(profile, a, posterior_prob) %>% 
   gather(key, val, profile) %>% # dplyr::mutate(val_weighted = posterior_prob*as.numeric(val)) %>% 
   group_by(a, val) %>% 
   tally(wt = posterior_prob) %>% # View()
   spread(val, n, fill = 0)  # %>% View()
-
-
-nrow(profiling_dist)
-
 
 
 
@@ -85,31 +102,10 @@ nrow(profiling_dist)
 occupation_profiling_dist = inner_join(pre_dist, profiling_dist, by = "a")
 
 
-
-
-
 # FIXME: loosing the information about the device used
-## merged %<>% dplyr::select(-RecordNo, -q)
-# merged %>% tidyr::spread(key = a, value = Occupation) %>% View
-
-## summary(merged$Occupation %>% as.factor())
-## summary(merged$a %>% as.factor())
-
-# TODO: mds on 100/200 pieces of software OR everything with frequency above 4/5
-
-## pre_dist =
-##   merged %>% 
-##   gather(key, val, Occupation) %>% 
-##   group_by(a, val) %>% 
-##   tally() %>% 
-##   spread(val, n, fill = 0)
-
-
-
-## merged %>% View
-## pre_dist %>% View
 
 occupation_profiling_dist %>% head()
+
 
 ```
 

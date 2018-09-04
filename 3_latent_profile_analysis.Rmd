@@ -12,9 +12,16 @@ source("./functions.R")
 
 ```
 
-TODO: Shifts
+Showing job shifts in connection with associated software is not possible due to NAs in Q21_1_open (previous job)
+TODO: transition plots for jobs
+TODO: transition plots for education
 
 ```{r}
+
+df_clean$Q18_1_open %>% as.factor() %>% summary()
+df_clean$Q21_1_open %>% as.factor() %>% summary()
+
+df_clean$profile_education %>% summary
 
 # Q18_1_open:Q18_a - job title + tasks description
 # Q21_1_open:Q22 - previous job titles + tasks description
@@ -56,9 +63,9 @@ UPD: not necessary right now
 
 ```{r}
 
+# FIXME: ?set not_mentioned?
 
 # Q24 - what industry do you work in
-# FIXME: set not_mentioned
 # Q21 - what was your last (main) job titled
 # Q23 Did you work in the public or private sector
 # Q85_4_5: Mobile phone: other
@@ -89,25 +96,52 @@ df_final$Q16[df_final$Q16 == 4] = 0
 df_final$Q17_R = 6 - df_final$Q17
 
 
+```
+
+Description of items for LPA
+
+```{r}
+
+# Q1 - language
+
+# TODO: ask about numbers
+# Q3_1 - Desktop
+# Q3_2 - Laptop
+# Q3_3 - Tablet
+# Q3_4 - Mobile phone/Smartphone
+
+#
+
+# Q8_v2_1 - Built-in default settings
+# Q8_v2_2 - Plugins/add-ons/extensions
+# Q8_v2_3 - Script to extend Software
+# Q8_v2_4 - I reprogram
+
+# Traditional Surveys
+# Q9 - Q10 - Q11 - Q12 - Q13 - Q14 - Q15 - Q16 - Q16
+
+# Q17_R - employment status
+
+
+
 
 ```
 
+
 LPA
-TODO: feed more variables (excluding occupation) to the algorithm
-TODO: CLEAN CODE
 
 
  ```{r}
 
 # Q17 - employment status, using Reversed Ordered Q17_R instead
 
-d = df_final %<>% dplyr::select(-c(weight))
-colnames_lpa = colnames(d)[!(colnames(d) %in% c("RecordNo",
-                                                "Q17",
-                                                "Occupation",
-                                                "profile_education",
-                                                "profile_age2", "profile_age1",
-                                                "region"))]
+vars_to_exclude = c("RecordNo", "weight","Q17",
+                    "Occupation", "profile_education",
+                    "profile_age2", "profile_age1",
+                    "region", "Q1", "gender")
+colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
+
+d = df_final
 
 
 ```
@@ -120,7 +154,7 @@ fit_output = explore_model_fit(d %>% dplyr::select(colnames_lpa),
                                n_profiles_range = 1:6)
 
 
-# fit_output %>% View
+fit_output %>% View
 
 ```
 
@@ -154,14 +188,14 @@ ggplot(to_plot,
 
 TODO: exclude binary variables from LPA
 
-Best on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2
+# OLD: Best on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2
 
 
 ```{r}
 
 m3 = estimate_profiles(d,
                        colnames_lpa,
-                       n_profiles = 3, 
+                       n_profiles = 6, 
                        model = 2,
                        return_orig_df = T)
 
@@ -174,16 +208,10 @@ Plotting
 
 ```{r}
 
-avoid_lpa = c("RecordNo",
-               "Q17",
-               "Occupation",
-               "profile_education",
-               "profile_age2", "profile_age1", "region")
-
 # RColorBrewer::brewer.pal(n, pal)
 # https://www.r-bloggers.com/how-to-expand-color-palette-with-ggplot-and-rcolorbrewer/
 
-plot_profiles(m3[, !(colnames(m3_full) %in% avoid_lpa)])
+plot_profiles(m3[, !(colnames(m3) %in% vars_to_exclude)])
 
 
 ```

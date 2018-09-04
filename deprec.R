@@ -108,3 +108,16 @@ to_kick_off = data.frame(
 clmn$status[clmn$colnames %in% to_kick_off$var_names[to_kick_off$na_quantity > 0]] = "-"
 
 write_csv("~/projects/appcentriccomp/data/columns_2.csv", x = clmn)
+
+
+
+## 4_.RMD
+## ----------
+
+
+## mered_with_prfiles = merged %>%
+##   group_by(q, RecordNo) %>%
+##   mutate(ind = row_number()) %>%
+##   spread(q, a, fill = "Nothing") %>%
+##   select(-ind) %>%
+##   View()
