@@ -1,0 +1,135 @@
+t-sne
+
+```{r}
+
+library(caret)  
+library(Rtsne)
+
+d = dist(pre_dist[,-1], method = 'canberra' ) # euclidean distances between the rows
+
+tsne_model_1 = Rtsne(as.matrix(occupation_profiling_dist[,-1]),
+                     check_duplicates=FALSE,
+                     pca=TRUE,
+                     perplexity=30, theta=0.5,
+                     dims=2)
+
+
+d_tsne_1 = as.data.frame(tsne_model_1$Y)  
+
+
+
+```
+
+
+```{r}
+
+## plotting the results without clustering
+ggplot(d_tsne_1, aes(x=V1, y=V2)) +  
+  geom_point(size=0.25) +
+  guides(colour=guide_legend(override.aes=list(size=6))) +
+  xlab("") + ylab("") +
+  ggtitle("t-SNE") +
+  theme_light(base_size=20) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank()) +
+  scale_colour_brewer(palette = "Set2")
+
+
+
+
+
+```
+
+
+
+```{r}
+
+## keeping original data
+d_tsne_1_original=d_tsne_1
+
+## Creating k-means clustering model, and assigning the result to the data used to create the tsne
+fit_cluster_kmeans=kmeans(scale(d_tsne_1), 6)  
+d_tsne_1_original$cl_kmeans = factor(fit_cluster_kmeans$cluster)
+
+## Creating hierarchical cluster model, and assigning the result to the data used to create the tsne
+fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
+
+## setting 3 clusters as output
+d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=3))
+
+```
+
+
+```{r}
+
+# labels_to_select =
+
+d_tsne_1_original$a = occupation_profiling_dist$a
+d_tsne_1_origin$a
+
+
+software_aggregation
+
+d_tsne_1_original %>% group_by(cl_kmeans) %>% mutate(n = n()) %>% mutate(n_w = n/sum(n)) %>% View()
+d_tsne_1_original %>% sample_n(50, weight=pop.weight, replace = TRUE) %>%
+
+occupation_profiling_dist$a[occupation_profiling_dist$a %in% software_aggregated$a2[1:115]]
+
+
+
+
+```
+
+
+```{r}
+
+
+
+d_tsne_1_original$cl_kmeans %<>% as.factor()
+
+# fit_tb = fit_tb %>% mutate(groups = clust)
+# Plot and color by groups
+
+ggscatter(d_tsne_1_original,
+          x = "V1", y = "V2", 
+          label = occupation_profiling_dist$a,
+          label.select = labels_to_select,
+#          color = "cl_kmeans",
+          color = "cl_hierarchical",
+          star.plot=TRUE,
+          palette = "jco",
+          size = 1, 
+          ellipse = TRUE,
+          ellipse.type = "convex",
+          repel = TRUE)
+# +geom_hline(yintercept=0, color = "red", size = 2)
+
+
+
+
+
+plot_cluster=function(data, var_cluster, palette)  
+{
+  ggplot(data, aes_string(x="V1", y="V2", color=var_cluster)) +
+  geom_point(size=0.25) +
+  guides(colour=guide_legend(override.aes=list(size=6))) +
+  xlab("") + ylab("") +
+  ggtitle("") +
+  theme_light(base_size=20) +
+  theme(axis.text.x=element_blank(),
+        axis.text.y=element_blank(),
+        legend.direction = "horizontal", 
+        legend.position = "bottom",
+        legend.box = "horizontal") + 
+    scale_colour_brewer(palette = palette) 
+}
+
+
+plot_k=plot_cluster(d_tsne_1_original, "cl_kmeans", "Accent")  
+plot_h=plot_cluster(d_tsne_1_original, "cl_hierarchical", "Set1")
+
+grid.arrange(plot_k, plot_h,  ncol=2)  
+
+
+
+```

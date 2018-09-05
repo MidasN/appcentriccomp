@@ -4,11 +4,9 @@
 library(tidyverse)
 library(magrittr)
 library(gridExtra)
-
+source("./functions.R")
 
 ```
-
-TODO: CLEAN 4th Rmd
 
 Extracting profile and prob associated with the person
 
@@ -69,13 +67,6 @@ merged_with_profiles %>% View
 
 
 
-
-```{r}
-
-
-```
-
-
 Summing probabilities from respondents to software
 UPD: Doesn't seem to be promising
 
@@ -92,17 +83,11 @@ profiling_dist = merged_with_profiles %>%
   spread(val, n, fill = 0)  # %>% View()
 
 
-anti_join(pre_dist, profiling_dist, by = "a")
+# checking for merging
+# anti_join(pre_dist, profiling_dist, by = "a")
 occupation_profiling_dist = inner_join(pre_dist, profiling_dist, by = "a")
 
-
-occupation_profiling_dist %>% View
-
-```
-
-Normalizing Frequencies
-
-```{r}
+# Normalizing Frequencies
 
 occupation_profiling_dist[,-1] = apply(X = occupation_profiling_dist[,-1],
                             2,
@@ -113,27 +98,89 @@ occupation_profiling_dist %>% View
 
 ```
 
-
-
-TODO: should I rescale/center data before MDS? kmeans? tsne (probably not)?
+# occupation + profiles per software for mapping
+## Only 200 most popular software items
 
 ```{r}
 
 
-
-"euclidean"
-'maximum'
-'manhattan'
-'minkowski'
-'canberra'
-'binary'
-
-
-
-## based on number of appearences defined in software_aggregated df
-labels_to_select = occupation_profiling_dist$a[occupation_profiling_dist$a %in% software_aggregated$a2[1:60]]
+profiling_dist_200 = merged_with_profiles %>%
+  dplyr::filter(a %in% software_aggregated$a2[1:200]) %>% 
+  dplyr::select(profile, a) %>% 
+  gather(key, val, profile) %>%  # dplyr::mutate(val_weighted = posterior_prob*as.numeric(val)) %>% 
+  group_by(a, val)  %>% 
+  tally() %>% 
+  spread(val, n, fill = 0)  # %>% View()
 
 
+# checking for merging
+# anti_join(pre_dist, profiling_dist, by = "a")
+occupation_profiling_dist_200 = inner_join(pre_dist, profiling_dist_200, by = "a")
+
+# Normalizing Frequencies
+
+occupation_profiling_dist_200[,-1] = apply(X = occupation_profiling_dist[,-1],
+                            2,
+                            FUN = function(x) scale(x, center = TRUE, scale = TRUE))
+
+
+occupation_profiling_dist %>% View
+
+```
+
+
+WAITING: Function to got predefined number of software labels for each cluster
+
+```{r}
+
+
+# based on number of appearences defined in software_aggregated df
+# common case 
+# labels_to_select = occupation_profiling_dist$a[occupation_profiling_dist$a %in% software_aggregated$a2[1:60]]
+
+
+occupation_profiling_dist$cluster = distance_clustering(occupation_profiling_dist, "canberra", 6)
+for_labels = inner_join(software_aggregated %>% dplyr::select(a = a2, n), occupation_profiling_dist, by = "a")
+
+
+# occupation_profiling_dist %>% View
+
+
+labels_to_select = for_labels %>%
+  group_by(cluster) %>%
+  top_n(n = 10, wt = n)
+
+
+```
+
+
+```{r}
+
+
+occupation_profiling_dist_200$cluster = distance_clustering(occupation_profiling_dist_200, "canberra", 6)
+for_labels_200 = inner_join(software_aggregated %>% dplyr::select(a = a2, n), occupation_profiling_dist_200, by = "a")
+
+
+# occupation_profiling_dist %>% View
+
+
+labels_to_select_200 = for_labels_200 %>%
+  group_by(cluster) %>%
+  top_n(n = 10, wt = n)
+
+
+labels_to_select_200 %>% View
+
+```
+
+
+
+
+# Mapping all the software items
+
+```{r}
+
+# "euclidean" 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'
 
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "canberra", labels_to_select, 6))
 
@@ -147,143 +194,19 @@ with(dev.new(), mds_n_plot(occupation_profiling_dist, "maximum", labels_to_selec
 
 
 
-q```
-
-
-t-sne
-
-```{r}
-
-library(caret)  
-library(Rtsne)
-
-d = dist(pre_dist[,-1], method = 'canberra' ) # euclidean distances between the rows
-
-tsne_model_1 = Rtsne(as.matrix(occupation_profiling_dist[,-1]),
-                     check_duplicates=FALSE,
-                     pca=TRUE,
-                     perplexity=30, theta=0.5,
-                     dims=2)
-
-
-d_tsne_1 = as.data.frame(tsne_model_1$Y)  
-
-
-
 ```
 
 
-```{r}
-
-## plotting the results without clustering
-ggplot(d_tsne_1, aes(x=V1, y=V2)) +  
-  geom_point(size=0.25) +
-  guides(colour=guide_legend(override.aes=list(size=6))) +
-  xlab("") + ylab("") +
-  ggtitle("t-SNE") +
-  theme_light(base_size=20) +
-  theme(axis.text.x=element_blank(),
-        axis.text.y=element_blank()) +
-  scale_colour_brewer(palette = "Set2")
-
-
-
-
-
-```
-
-
-
-```{r}
-
-## keeping original data
-d_tsne_1_original=d_tsne_1
-
-## Creating k-means clustering model, and assigning the result to the data used to create the tsne
-fit_cluster_kmeans=kmeans(scale(d_tsne_1), 6)  
-d_tsne_1_original$cl_kmeans = factor(fit_cluster_kmeans$cluster)
-
-## Creating hierarchical cluster model, and assigning the result to the data used to create the tsne
-fit_cluster_hierarchical=hclust(dist(scale(d_tsne_1)))
-
-## setting 3 clusters as output
-d_tsne_1_original$cl_hierarchical = factor(cutree(fit_cluster_hierarchical, k=3))
-
-```
-
-TODO: Function to got predefined number of software labels for each cluster
-
-
-```{r}
-
-# labels_to_select =
-
-d_tsne_1_original$a = occupation_profiling_dist$a
-d_tsne_1_origin$a
-
-
-software_aggregation
-
-d_tsne_1_original %>% group_by(cl_kmeans) %>% mutate(n = n()) %>% mutate(n_w = n/sum(n)) %>% View()
-d_tsne_1_original %>% sample_n(50, weight=pop.weight, replace = TRUE) %>%
-
-occupation_profiling_dist$a[occupation_profiling_dist$a %in% software_aggregated$a2[1:115]]
-
-
-
-
-```
+# Mapping only top-200
 
 
 ```{r}
 
 
-
-d_tsne_1_original$cl_kmeans %<>% as.factor()
-
-# fit_tb = fit_tb %>% mutate(groups = clust)
-# Plot and color by groups
-
-ggscatter(d_tsne_1_original,
-          x = "V1", y = "V2", 
-          label = occupation_profiling_dist$a,
-          label.select = labels_to_select,
-#          color = "cl_kmeans",
-          color = "cl_hierarchical",
-          star.plot=TRUE,
-          palette = "jco",
-          size = 1, 
-          ellipse = TRUE,
-          ellipse.type = "convex",
-          repel = TRUE)
-# +geom_hline(yintercept=0, color = "red", size = 2)
-
-
-
-
-
-plot_cluster=function(data, var_cluster, palette)  
-{
-  ggplot(data, aes_string(x="V1", y="V2", color=var_cluster)) +
-  geom_point(size=0.25) +
-  guides(colour=guide_legend(override.aes=list(size=6))) +
-  xlab("") + ylab("") +
-  ggtitle("") +
-  theme_light(base_size=20) +
-  theme(axis.text.x=element_blank(),
-        axis.text.y=element_blank(),
-        legend.direction = "horizontal", 
-        legend.position = "bottom",
-        legend.box = "horizontal") + 
-    scale_colour_brewer(palette = palette) 
-}
-
-
-plot_k=plot_cluster(d_tsne_1_original, "cl_kmeans", "Accent")  
-plot_h=plot_cluster(d_tsne_1_original, "cl_hierarchical", "Set1")
-
-grid.arrange(plot_k, plot_h,  ncol=2)  
-
+## using only profiles
+with(dev.new(), plot_mds(occupation_profiling_dist_200 %>% ungroup() %>%  dplyr::select(a, groups, '1', '2', '3', '4','5', '6', cluster), "canberra", labels_to_select_200, 6))
 
 
 ```
+
+

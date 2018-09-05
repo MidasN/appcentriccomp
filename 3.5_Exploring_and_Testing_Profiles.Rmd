@@ -1,0 +1,69 @@
+```{r}
+
+library()
+
+colnames_lpa
+
+```
+
+
+Plotting 
+
+
+```{r}
+
+m3 = estimate_profiles(d,
+                       colnames_lpa,
+                       n_profiles = 6, 
+                       model = 2,
+                       return_orig_df = T)
+
+
+plot_profiles(m3[, c("Q8_v2_1", "Q8_v2_2", "Q8_v2_3", "Q8_v2_4", "profile", "posterior_prob")])
+
+
+```
+
+# Testing
+
+## TODO: number of unique pieces of software used as a dependent
+
+```{r}
+
+# not a rocket science, it is signigifant everywhere
+kruskal.test(data = m3, Q8_v2_1 ~ profile)
+kruskal.test(data = m3, Q8_v2_2 ~ profile)
+kruskal.test(data = m3, Q8_v2_3 ~ profile)
+kruskal.test(data = m3, Q8_v2_4 ~ profile)
+
+library(PMCMR)
+
+# posthoc.
+
+# post hoc testing
+
+pairwise.wilcox.test(m3$Q8_v2_1, 
+                     m3$profile, 
+                     p.adjust.method="bonferroni",
+                     paired = FALSE)
+
+pairwise.wilcox.test(m3$Q8_v2_2, 
+                     m3$profile, 
+                     p.adjust.method="bonferroni",
+                     paired = FALSE)
+
+
+pairwise.wilcox.test(m3$Q8_v2_3, 
+                     m3$profile, 
+                     p.adjust.method="bonferroni",
+                     paired = FALSE)
+
+
+pairwise.wilcox.test(m3$Q8_v2_4, 
+                     m3$profile, 
+                     p.adjust.method="bonferroni",
+                     paired = FALSE)
+
+
+
+```

@@ -1,3 +1,51 @@
+
+
+# the main purpose is to got clusters labels before plotting
+distance_clustering <- function(pre_dist, method, clust_n, what_to_return){
+
+  pre_dist %<>% ungroup()
+
+  d = dist(pre_dist %>%
+             dplyr::select(-a, -groups, -cluster),
+           method = method)
+  fit = cmdscale(d, k = 2)
+
+  fit_tb = fit %>% as_tibble()
+
+  clust = kmeans(fit_tb, clust_n)$cluster %>% as.factor()
+  fit_tb = fit_tb %>% # making it global for later use in for_labels df
+    mutate(groups = clust)
+
+  if (what_to_return == "clust") {
+    return(clust)
+  }
+  else {
+    return(fit_tb)
+  }
+
+
+}
+
+
+# main use case is to use when labels are gathered using distance_clustering function
+plot_mds <- function(pre_dist, method, labels_to_select, clust_n) {
+
+  fit_tb = distance_clustering(pre_dist, method, clust_n, "fit")
+
+  ggscatter(fit_tb,
+            x = "V1", y = "V2",
+            label = pre_dist$a,
+            label.select = labels_to_select$a,
+            color = "groups",
+            star.plot = TRUE,
+            palette = "jco",
+            size = 1,
+            ellipse = TRUE,
+            ellipse.type = "convex",
+            repel = TRUE)
+}
+
+
 mds_n_plot <- function(pre_dist, method, labels_to_select, clust_n){
 
   d = dist(pre_dist[,-1], method = method)
@@ -10,9 +58,10 @@ mds_n_plot <- function(pre_dist, method, labels_to_select, clust_n){
   x = fit[, 1]
   y = fit[, 2]
 
-  clust = kmeans(fit_tb, clust_n)$cluster %>% as.factor()
-  fit_tb = fit_tb %>%
+  clust <<- kmeans(fit_tb, clust_n)$cluster %>% as.factor() ## FIXME: delete global declaration
+  fit_tb = fit_tb %>% # making it global for later use in for_labels df
     mutate(groups = clust)
+
 
   ggscatter(fit_tb,
           x = "Dim.1", y = "Dim.2",
