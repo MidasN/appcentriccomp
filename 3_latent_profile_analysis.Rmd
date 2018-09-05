@@ -186,7 +186,7 @@ ggplot(to_plot,
 
 ```
 
-TODO: exclude binary variables from LPA
+DONE: exclude binary variables from LPA
 
 # OLD: Best on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2
 
