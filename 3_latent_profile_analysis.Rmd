@@ -139,6 +139,7 @@ vars_to_exclude = c("RecordNo", "weight","Q17",
                     "Occupation", "profile_education",
                     "profile_age2", "profile_age1",
                     "region", "Q1", "gender")
+
 colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
 
 d = df_final
@@ -195,7 +196,7 @@ DONE: exclude binary variables from LPA
 
 m3 = estimate_profiles(d,
                        colnames_lpa,
-                       n_profiles = 6, 
+                       n_profiles = 5, 
                        model = 2,
                        return_orig_df = T)
 

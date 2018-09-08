@@ -1,8 +1,6 @@
 ```{r}
-
-library()
-
-colnames_lpa
+magrittr)
+library(tidyverse)
 
 ```
 
@@ -12,11 +10,11 @@ Plotting
 
 ```{r}
 
-m3 = estimate_profiles(d,
-                       colnames_lpa,
-                       n_profiles = 6, 
-                       model = 2,
-                       return_orig_df = T)
+## m3 = estimate_profiles(d,
+##                        colnames_lpa,
+##                        n_profiles = , 
+##                        model = 2,
+##                        return_orig_df = T)
 
 
 plot_profiles(m3[, c("Q8_v2_1", "Q8_v2_2", "Q8_v2_3", "Q8_v2_4", "profile", "posterior_prob")])
@@ -26,7 +24,42 @@ plot_profiles(m3[, c("Q8_v2_1", "Q8_v2_2", "Q8_v2_3", "Q8_v2_4", "profile", "pos
 
 # Testing
 
-## TODO: number of unique pieces of software used as a dependent
+## DONE: number of pieces of software used
+### in general
+### per question
+
+```{r}
+
+software_cleaned  %>%
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft = n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q = n()) %>%
+  ungroup() %>% head
+
+```
+
+## Number of software used out of top-10
+
+
+```{r}
+
+
+software_cleaned  %>%
+  filter(!(.$a2 %in% (software_aggregated %>% top_n(10, n) %$% a2))) %>% 
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft_non_pop= n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q_non_pop= n()) %>%
+  ungroup() %>% View
+
+
+
+```
+
+
 
 ```{r}
 
@@ -36,10 +69,19 @@ kruskal.test(data = m3, Q8_v2_2 ~ profile)
 kruskal.test(data = m3, Q8_v2_3 ~ profile)
 kruskal.test(data = m3, Q8_v2_4 ~ profile)
 
+inner_join(m3[m3$profile == 2,] %>% dplyr::arrange(sort(.$posterior_prob, decreasing = TRUE)) %>% top_n(n=10, posterior_prob),
+           software_cleaned,
+           by = "RecordNo") %>% View()
+
+
+inner_join(m3[m3$profile == 3,] %>% dplyr::arrange(sort(.$posterior_prob, decreasing = TRUE)) %>% top_n(n=10, posterior_prob),
+           software_cleaned,
+           by = "RecordNo") %>% View()
+
+
 library(PMCMR)
 
 # posthoc.
-
 # post hoc testing
 
 pairwise.wilcox.test(m3$Q8_v2_1, 
@@ -63,6 +105,13 @@ pairwise.wilcox.test(m3$Q8_v2_4,
                      m3$profile, 
                      p.adjust.method="bonferroni",
                      paired = FALSE)
+
+
+
+```
+
+
+```{r}
 
 
 
