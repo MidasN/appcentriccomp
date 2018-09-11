@@ -95,9 +95,7 @@ software_aggregated <- software_cleaned %>% #Group and order high to low
   group_by(a2) %>% count(a2) %>% arrange(desc(n)) %>% # Show cumulative relative frequency of apps
   ungroup() %>%
   mutate(relcumsum = cumsum(n / 4131 * 100))
-
 ```
-
 
 
 ```{r}

@@ -32,8 +32,6 @@ mds on 100/200 pieces of software OR everything with frequency above 4/5
 Using software_aggregated (sorted by items frequencies) for choosing labels
 
 
-
-
 ```{r}
 
 
@@ -56,6 +54,17 @@ pre_dist_200 =
 
 ```
 
+Scaling Before MDS, results are even worse
+
+```{r}
+
+
+pre_dist_100[,-1] %<>% apply(2, function(X) scale(X))
+pre_dist_200[,-1] %<>% apply(2, function(X) scale(X))
+
+
+```
+
 
 Labels to put on the map
 
@@ -70,6 +79,7 @@ MDS
 ```{r}
 
 set.seed(33)
+# "euclidean" 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'
 
 source("./functions.R")
 
@@ -77,7 +87,7 @@ with(dev.new(), mds_n_plot(pre_dist, "canberra", labels_to_select, 6))
 
 with(dev.new(), mds_n_plot(pre_dist_100, "canberra", labels_to_select, 6))
 
-with(dev.new(), mds_n_plot(pre_dist_200, "canberra", labels_to_select, 8))
+with(dev.new(), mds_n_plot(pre_dist_200, "manhattan", labels_to_select, 6))
 
 
 ```

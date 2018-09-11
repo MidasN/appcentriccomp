@@ -140,9 +140,9 @@ vars_to_exclude = c("RecordNo", "weight","Q17",
                     "profile_age2", "profile_age1",
                     "region", "Q1", "gender")
 
-colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
-
 d = df_final
+
+colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
 
 
 ```
