@@ -109,7 +109,6 @@ Description of items for LPA
 # Q3_2 - Laptop
 # Q3_3 - Tablet
 # Q3_4 - Mobile phone/Smartphone
-
 #
 
 # Q8_v2_1 - Built-in default settings

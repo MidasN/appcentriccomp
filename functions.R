@@ -68,7 +68,7 @@ mds_n_plot <- function(pre_dist, method, labels_to_select, clust_n){
           label = pre_dist$a,
           label.select = labels_to_select,
           color = "groups",
-          star.plot = TRUE,
+      #    star.plot = TRUE,
           palette = "jco",
           size = 1,
           ellipse = TRUE,
