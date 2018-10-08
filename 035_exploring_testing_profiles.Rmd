@@ -1,3 +1,18 @@
+---
+title: "2_Respondents_Profiling"
+mainfont: DejaVu Sans
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+  html_document: default
+  word_document: default
+  font-family: Times New Roman
+---
+
+
+
+
 ```{r}
 
 library(magrittr)
@@ -29,7 +44,7 @@ ggsave(device="png", plot=q8_plot, filename="./plots/q8_plot.png", scale=.2, hei
 
 # Testing
 
-## DONE: number of pieces of software used
+## SOLVED: number of pieces of software used
 ### in general
 ### per question
 
@@ -63,7 +78,7 @@ vars2 = software_cleaned  %>%
 
 
 ```
-# Stat - Occupation/Profile
+#### Stat - Occupation/Profile
 
 ```{r}
 
@@ -79,7 +94,7 @@ m3 %>%
 ```
 
 
-# Mosaicplot: Occupation/Profile
+#### Mosaicplot: Occupation/Profile
 
 ```{r}
 
@@ -130,7 +145,6 @@ ttt = pairwise.wilcox.test(tmp$n_unique_soft_per_q_non_pop,
                      paired = FALSE)
 
 texreg(ttt)
-
 screenreg(ttt)
 
 ## TODO: might be kinda cool in conjunction with smth else, elaborate on this
@@ -183,13 +197,6 @@ pairwise.wilcox.test(m3$Q8_v2_4,
                      m3$profile, 
                      p.adjust.method="bonferroni",
                      paired = FALSE)
-
-
-
-```
-
-
-```{r}
 
 
 

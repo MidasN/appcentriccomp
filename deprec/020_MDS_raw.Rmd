@@ -1,3 +1,15 @@
+---
+title: "Untitled"
+mainfont: DejaVu Sans
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+  html_document: default
+  word_document: default
+  font-family: Times New Roman
+---
+
 
 ```{r}
 
@@ -7,7 +19,6 @@ library(ggpubr)
 library(ggplot2)
 
 ```
-
 
 
 
@@ -85,11 +96,8 @@ set.seed(33)
 # "euclidean" 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'
 
 source("./functions.R")
-
 with(dev.new(), mds_n_plot(pre_dist, "canberra", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(pre_dist_100, "canberra", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(pre_dist_200, "manhattan", labels_to_select, 6))
 
 

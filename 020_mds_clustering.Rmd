@@ -1,0 +1,640 @@
+---
+title: "1_Software_Clusterisation"
+mainfont: DejaVu Sans
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+  html_document: default
+  word_document: default
+  font-family: Times New Roman
+---
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+# source(knitr::purl("1_.Rmd", output = tempfile(), documentation = 0))
+
+source('010_data_preprocessing.R')
+source("./functions.R")
+
+library(tidyverse)
+library(magrittr)
+library(tidyLPA)
+
+library(ggplot2)
+library(ggpubr)
+
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+library(knitr)
+library(kableExtra)
+
+
+
+```
+
+
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## Here I am excluding timing columns
+
+df_clean %<>%
+  dplyr::select(-c(page_pSC1_timing:tot_time))
+
+# df_clean %>% nrow
+na_vector = apply(df_clean, 2, function(x){
+
+  sum(is.na(x))
+
+})
+
+## na_vector[na_vector > 0] # which variables produce most of the NAs
+df_final = df_clean %>% dplyr::select(
+                                      names(na_vector[na_vector == 0]),
+                                      -Occupation_Num, -status, -Occupation_DISCO,
+                                      -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
+                                      -c(Q21_1_open, Q22),
+                                      -c(Q18_1_open, Q18a),
+                                      -c(comments, Q4, Q5, Q6, Q7))
+
+
+# df_final %>% nrow
+# df_final %>% ncol
+
+```
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## Reordering variables to make values semi-continuous
+
+df_final$Q9[df_final$Q9 == 4] = 0
+df_final$Q10[df_final$Q10 == 4] = 0
+df_final$Q11[df_final$Q11 == 4] = 0
+df_final$Q12[df_final$Q12 == 4] = 0
+df_final$Q13[df_final$Q13 == 4] = 0
+df_final$Q14[df_final$Q14 == 4] = 0
+df_final$Q15[df_final$Q15 == 4] = 0
+df_final$Q16[df_final$Q16 == 4] = 0
+
+df_final$Q17_R = 6 - df_final$Q17
+
+
+```
+
+As we discussed, I've filtered the software out of the top 9. As far as I can judge it might have notable implications further.
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
+
+merged <- merge(x = software_cleaned[!(software_cleaned$a2 %in% (software_aggregated %>% top_n(9, n) %$% a2)),], # throwing away top 9
+                y = jobtitleanddescription,
+                by = "RecordNo") %>%
+  select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
+
+
+## merged <- merge(x = software_cleaned, # SOLVED: + 200 respondents
+##                 y = jobtitleanddescription,
+##                 by = "RecordNo") %>%
+##   select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
+
+
+
+```
+
+Added the binaries such as:  
+    - cloudnessBinary  
+    - mobileBinary  
+
+Relabeled Q4-Q7 such as:  
+    - stationaryQuantity  
+    - mobileQuantity  
+    - cloudnessQuantity  
+
+```{r}
+
+## SOLVED: remake the table with a `q` per `a2`
+
+merged = merged %>%
+  mutate(id = 1:nrow(merged)) %>% 
+  group_by(a2, q) %>%
+  mutate(QuantPerDevice = n()) %>% 
+  spread(key = q, value = QuantPerDevice, fill = 0) %>% select(-id) %>%
+  ungroup() %>% group_by(a2) %>% 
+  mutate(stationaryQuantity = sum(Q4), # feature: quantity, software on desktop/laptop
+         mobileQuantitiy = sum(Q5 + Q6), # feature: quantity, software on mobile/laptop devices
+         cloudnessQuantity = sum(Q7)) %>% # feature: quantity, software is used on the web (cloud)
+  select(-c(Q4, Q5,Q6, Q7))
+
+# feaure: whether software is principally used on several devices
+merged$mobileBinary = ifelse(merged$mobileQuantitiy > 1, 1, 0)
+# feature: whether software is principally possess web version
+merged$cloudnessBinary  = ifelse(merged$cloudnessQuantity > 1, 1, 0)
+
+
+```
+
+
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## SOLVED: what I was doing wrong before I have not excluded repeated items per respondent
+
+merged_quas = merged[!is.na(merged$a2), ] %>% # removing NA's from the a column
+  dplyr::rename(a = a2) # %>% # SOLVED: loosing the information about the device used
+
+## merged_quas = merged_quas %>%
+##   group_by(RecordNo, a) %>%
+##   mutate(n = n()) %>% dplyr::filter(n < 2) %>% dplyr::select(-n) %>%
+##   ungroup() # moving out duplicates produced by Q4- and so on quesions
+
+
+```
+
+Adding Q8_v2_1:Q16 questions with are ordinal. We treat them close to numerical in order to make aggregation for the software peaces.
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+df_quas = df_clean %>% select(RecordNo, Q8_v2_1:Q16)
+# anti_join(df_quas, merged_quas, by = "RecordNo") %>% View # 180 respondents are missing
+
+df_merged_quas = inner_join(df_quas, merged_quas, by = "RecordNo")
+
+df_merged_quas %$% unique(RecordNo) %>% # SOVLED: 681 - if filetring without top-9 items, check whether this is connected with software out of top-9
+  length() # 841 - if it is included
+
+
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## SOLVED: think about how to adjust number of users - just scaled them all-together
+## ALT: simple decision might be just to throw away software which is used less than by 5 respondents in the sample
+
+
+## SOLVED: disable normalising here
+## or use for the isolated MDS plot
+
+## pre_dist_multi = df_merged_quas %>% select(-Occupation) %>% 
+##   group_by(a) %>% 
+##   mutate_at(vars(Q8_v2_1:Q16),
+##             funs("agr" = sum(.))) %>% mutate(n = n()) %>%
+##   mutate_at(vars(Q8_v2_1_agr:Q16_agr),
+##                    funs("norm" = . / n)) %>% 
+##   select(-c(Q8_v2_1_agr:Q16_agr),
+##          -c(Q8_v2_1:Q16))  %>%
+##   dplyr::rename(respondents_quant = n)  %>%
+##   filter(row_number() == 1)  %>%
+##   ungroup() %>%  arrange(desc(respondents_quant)) # %>% View
+
+pre_dist_multi = df_merged_quas %>% select(-Occupation) %>% 
+  group_by(a) %>% 
+  mutate_at(vars(Q8_v2_1:Q16),
+            funs("agr" = sum(.)))  %>% 
+  select(-c(Q8_v2_1:Q16))  %>%
+  mutate(n = n()) %>% 
+  dplyr::rename(respondents_quant = n)  %>%
+  filter(row_number() == 1)  %>%
+  ungroup() %>% arrange(desc(respondents_quant)) # %>% View
+
+
+
+# pre_dist_multi$a %>% as.factor() %>% summary()
+# pre_dist_multi %>% View
+
+
+```
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## grouping is made for occupations
+pre_dist_occupations = df_merged_quas %>%
+  gather(key, val, Occupation) %>% 
+  dplyr::select(a, key, val) %>% 
+  group_by(a, val) %>% tally() %>%
+  spread(val, n, fill = 0)  %>%
+  ungroup()
+
+
+# pre_dist_occupations$a %>% as.factor() %>% summary()
+
+```
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE}
+
+## joining all together
+pre_dist_multi_final = inner_join(pre_dist_multi, pre_dist_occupations, by = "a") %>%
+  select(-respondents_quant) # soft. items are unique
+
+
+```
+
+
+# Pre-MDS data preparation, scaling  
+
+One of the first plot I showed was MDS without any scaling for Occupations. Due to the fact that some of the Occupations are simple over represented it might have (and probably did) affected the interpretability. Though, current groups of software clustered a bit better.
+
+
+```{r, message=FALSE, warning=FALSE}
+
+## Scaling Before MDS, results are even worse    
+## UPD: scaling should be accomplished for all of the vars, another fix
+
+# pre_dist_multi_final %>% colnames()
+
+## scaling only for occupations since they represent absolute frequencies
+
+pre_dist_multi_final_no_scaling = pre_dist_multi_final
+pre_dist_multi_final[,-c(1,2)] %<>% apply(2, function(X) scale(X))
+
+## pre_dist_multi_final[,-c(1:3)] %<>% apply(2, function(X) scale(X, center = FALSE))
+
+
+```
+
+# MDS includes all  
+
+
+I tried several distance calculation metrics ('euclidean' 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'). Manhattan is good, though, canberra - seems to better divide groups. The difference between them is that canberra is better suited for discrete, while euclidean is the de facto default for continuous numeric. I wrapped MDS, kmeans and visualisation into function - you can try different distances, it is the **_mds_with_Q8**.
+
+## Figure 1 is the option I suggest to stop on for now 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.cap = "MDS with all constructs:devices, reprogrammability, occupation", dev='png', fig.width=14, fig.height=12}
+
+
+## theme(aspect.ratio=10)
+
+
+## `RecordNo` and `a` is considered inside the function, don't delete explicitly
+## put both in both `columns_exclude_` to include all
+
+p = flexible_clustering(pre_dist_multi_final, method = "canberra", clust_n = 5, labels_col = 12,
+                        column_exclude_start = 0, column_exclude_end = 0, seed = 11)$plot
+
+## ggsave(device="png", plot=p, filename="./plots/kmeans_canberra.png",
+##        scale=.2, height = 1024, width = 1024, units = "mm")
+
+p
+
+```
+
+## Different distance used, what I don't like here is that Apple Contacts and Calendar are in a different places.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.cap = "Mapping Software: Apple Products Appeared in Different Clusters ", dev='png', fig.width=14, fig.height=12}
+
+p = flexible_clustering(pre_dist_multi_final, method = "manhattan", clust_n = 5, labels_col = 12,
+                        column_exclude_start = 0, column_exclude_end = 0, seed = 11)$plot
+
+p
+
+```
+
+# Others (just take to be aware of alternatives)
+## MDS: reprogrammability and devices used
+
+I put it here just to compare with the previous one, I like it much less than the previous one. Meanwhile, it might be that I just overlooked something important.
+
+### Canberra distances
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.caption="Mapping Software: Based on on repogrammability items and info about devices used - Canberra Dist", dev='png', fig.width=14, fig.height=12}
+
+
+## pre_dist_multi_final %>% colnames
+
+p = flexible_clustering(pre_dist_multi_final, method = "canberra", clust_n = 5, labels_col = 12,
+                        column_exclude_start = 20, column_exclude_end = 29, additional_exclude = c("cloudnessBinary","mobileBinary"),
+                        seed = 11)$plot
+
+p
+
+```
+
+### Euclidean distances
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.caption="Mapping Software: Based on on repogrammability items and info about devices used - Euclidean Dist", dev='png', fig.width=14, fig.height=12}
+
+p = flexible_clustering(pre_dist_multi_final, method = "euclidean", clust_n = 4, labels_col = 6,
+                        column_exclude_start = 20, column_exclude_end = 29, additional_exclude = c("cloudnessBinary","mobileBinary"),
+                        seed = 11)$plot
+
+
+p
+
+```
+
+
+## MDS: only Occupation
+
+This one is a bit better.  
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.caption="Mapping Software Based on Occupation: Canberra Distance", dev='png', fig.width=14, fig.height=12}
+
+
+p = flexible_clustering(pre_dist_multi_final, method = "canberra", clust_n = 5, labels_col = 12,
+                        column_exclude_start = 3, column_exclude_end = 20,
+                        #additional_exclude = c("cloudnessBinary","mobileBinary"),
+                        seed = 11)$plot
+
+
+
+p
+
+
+```
+
+
+# Inspection   
+
+This table gives an overview of the most typical software items for each cluster. Raw frequencies are useful to identify goodness of clusters (some contains much less than others, probably, should think about decreasing to 4). Scaled might be useful for the description of clusters using info about professions (health guys use MS Word and few other software items and that's all). Something similar is given for the respondents in LPA.  
+
+```{r, message=FALSE, warning=FALSE}
+
+## options(width = 80)
+
+inspect = flexible_clustering(pre_dist_multi_final, method = "canberra", clust_n = 5, labels_col = 12,
+                              column_exclude_start = 0, column_exclude_end = 0, seed = 11)
+
+inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             select(labels, groups),
+           pre_dist_multi_final_no_scaling, by = c("labels" = "a")) %>%
+  arrange(groups) %>% select(-RecordNo) %>%
+  group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) sum(.) else first(.))) %>%
+  dplyr::select(-labels, -c(stationaryQuantity:Q16_agr))  %>% 
+  knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T) 
+
+
+inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             select(labels, groups),
+           pre_dist_multi_final, by = c("labels" = "a")) %>%
+  arrange(groups) %>% select(-RecordNo) %>%
+  group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) mean(.) else first(.))) %>%
+  dplyr::select(-labels, -c(stationaryQuantity:Q16_agr)) %>%
+  ## formattable()
+  knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+## inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+##              ## filter(labels %in% inspect$selectedLables) %>%
+##              select(labels, groups),
+##            pre_dist_multi_final_no_scaling, by = c("labels" = "a")) %>% arrange(groups) %>% select(-RecordNo) %>% 
+##   group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) sum(.) else first(.))) %>% View
+
+
+
+# cbind(inspect$fit, labels = inspect$labels) %>% filter(labels %in% c("R", "MS Planner"))
+
+```
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+
+
+inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             select(labels, groups),
+           pre_dist_multi_final, by = c("labels" = "a")) %>%
+  arrange(groups) %>% select(-RecordNo) %>%
+  group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) mean(.) else first(.))) %>%
+  dplyr::select(-labels, -c(stationaryQuantity:Q16_agr)) %>%
+  View
+
+
+
+inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             select(labels, groups),
+           pre_dist_multi_final_no_scaling, by = c("labels" = "a")) %>%
+  arrange(groups) %>% select(-RecordNo, -c(stationaryQuantity:Q16_agr)) %>%
+  group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) sum(.) else first(.))) %>%
+  dplyr::select(-labels) %>%
+  View
+
+
+inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             select(labels, groups),
+           pre_dist_multi_final_no_scaling, by = c("labels" = "a")) %>%
+  arrange(groups) %>% select(-c(stationaryQuantity:Q16_agr)) %>%
+  dplyr::select(-RecordNo) %>% 
+  group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) sum(.) else first(.))) %>%
+  dplyr::select(-labels) %>% ungroup() %>% mutate_at(vars(`Business and administration`:`Teaching`), funs("agr" = . / sum(.))) %>% View
+#  View
+
+
+
+```
+
+
+
+# Understanding Clusters
+
+
+## Parallel Coordinates Plot
+
+This is simple implementation of parallel coordinates. Horizontal lines here are simply means of clusters. This way, it gives an overview of what each cluster is about. Since values are scaled, less than 0 - less than mean, above 0 - above the mean. I included only variables connected with devices.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.caption="Parallel Coordinates: Devices Overview for Clusters", dev='png', fig.width=14, fig.height=12}
+
+parallelCoordsDf = inner_join(cbind(inspect$fit, labels = inspect$labels) %>%
+             ## filter(labels %in% inspect$selectedLables) %>%
+             select(labels, groups),
+             pre_dist_multi_final_no_scaling, by = c("labels" = "a"))
+
+
+parallelCoordsDf$groups %<>% as.character()
+parallelCoordsDf$RecordNo %<>% as.character()
+parallelCoordsDf %<>% group_by(groups) %>% summarise_all(funs(if(is.numeric(.)) mean(.) else first(.)))
+
+
+theme_set(theme_classic())
+
+ggplot(parallelCoordsDf %>% 
+         mutate(ID = 1:n()) %>%             
+         mutate_if(is.numeric, scale) %>% ## FIXME: make global scale before aggregation
+         gather(key, value, c(4:8)),   
+       aes(key, value, group=groups, colour = groups)) + 
+  geom_line() +
+  geom_vline(xintercept = 1:5) + 
+  geom_point(size=2, shape=21, colour="grey50") +
+  scale_fill_manual(values=c("black","white"))
+
+```
+
+
+The main point is that mostly Management Systems (CRM systems), Planning Systems and Software used to Support Collaboration (examples) and software for software development (tautology** and programming languages are plotted.
+
+Only 12 software pieces, which are closer to the core of each cluster are plotted.
+
+*I am describing clusters from Figure 1*
+
+1 cluster:  
+
+ - low reprogrammability
+ - nothing specific in terms of device used
+ - this cluster includes teachers, general management, business, health and ICT - very diverse in terms of profession
+ - from another side, it represents respondents who don't care about extensibility of their software toolset
+ 
+Based on the soft used [NemOkono](https://www.nemkonto.dk/), [IAR Workbench](https://www.iar.com/iar-embedded-workbench/), [Schlumberger](https://www.software.slb.com/) and [Team Gannt](https://www.teamgantt.com/), especially, Pycharm, it might be about software engineers who do not care about the extensibility of tools used either about the senior developers/managers, who rarely programm (Pycharm), but mostly engaged in the planning activities (Team Gannt - Gannt charts - projects dependencies, seems like IT approach). Teachers probably use [this](https://easyiq.dk/skoleportal/).   
+
+Seems like the main logo of this cluster "This tool is just making the job need to be done"
+
+2 cluster:
+
+- small cluster in terms of respondents
+- managers, ICT, Teachers
+- high scores on customasibility of software (less than in 5th cluster, more than in 4th)
+- prevalence of software used on mobile+tablet type of device
+
+
+Logo: "Intelligent middle-layer"
+
+Software used:
+ - [Pelco - CCTV (?)](https://www.sourcesecurity.com/cctv-software/make.mk-134-ga.html) - system administrators , 
+ - [Fasit](https://schultz.dk/loesninger/schultz-fasit/) - automatisation job workflow system ? management
+ - [intoWords](https://www.mv-nordic.com/en/products/intowords/) - speech-to-text tool, might be used by secretariat 
+ - [airTable](https://airtable.com/) - lightweight and fency web spreadshit tool
+ - [Screencastomatic](https://screencast-o-matic.com/) - used for video capturing
+ - Apple Calendar
+
+
+3 cluster:
+
+- lowest reprogrammability
+- nothing specific in terms of device orientation
+- diverse in terms of occupations: business + management + health (+) Legal, social and Cultural + Science and Engineering + Teaching
+
+Facebook  
+[WeTransfer](https://wetransfer.com/)  
+[InfoSuite](https://www.infosuite.dk/)   
+
+
+Software is rather specific (WeTransfer - file sharing) or has very broad focus (Facebook).   
+While can't say about the software items, should TODO: check those users: intuitively, they might use fewer tools than others.  
+
+4 cluster:
+
+The majority of the software items are included in this cluster. I cannot completely understand why mostly items connected with programming languages and open source are mapped on the plot.  #TODO: use DALEX or something similar to untangle K-Means clusterisation
+
+- medium repogrammability
+- device-specific variables are higher than mean, though, it is the biggest cluster, so, don't think it tells a lot
+
+
+COBOL - programming language for business  
+SSH - yeah, well  
+Autodesk Sketchbook - might be proprietary  
+TIZEN - open source  
+Hadoop - should be open sourced  
+[wildfly](Jboss/WildFly) - open source as well  
+
+
+5 cluster:  
+
+ - small cluster
+ - mostly stationary and web applications
+ - highest reprogrammability 
+ - professions: business, no executives, some users are managers, science + engineering guys
+
+It includes MS Planner, Edge/Explorer, [Byggeweb](https://www.rib-software.dk/) + R and SPSS + Adobe CC (outlier, don't like it here). Mostly this cluster has highest score across reprogrammability. Generally, notable combination of tools with high reprogrammability with proprietary software without any customization capabilities. Should inspect it more closely.
+
+
+Resume: Either we should figure out a better way to map software considering occupations, either forget about occupation as a measurement for software.  
+
+To try: What I started to doing is Latent Profile Analysis (LPA) (sort of Dimensionality Reduction specifically for respondents). Since I didn't completely understand whether it's respondents of software in the focus (still questionable, right?) I started to describe software using respondents and vice versa. Instead, maybe, we should consider use SES-style info in LPA, extract those profiles and try to describe software based on it (it should solve the issue with sparse occupation matrix, since, in clustering Occupations doesn't influence the results that much as expected).
+
+
+
+## Radar Plot
+
+This is simple implementation of spyder/radar plot. I wasn't a big fan this kind of plot, but I think I like them now. Also, just additional line of code in ggplot2. 
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, fig.caption="Radar Plot: Understanding Reprogrammability of Software", dev='png', fig.width=14, fig.height=12}
+
+ggplot(parallelCoordsDf %>% 
+         mutate(ID = 1:n()) %>%             
+         mutate_if(is.numeric, scale) %>% ## FIXME: make global scale before aggregation 
+         gather(key, value, c(9:20)),  
+       aes(key, value, group=groups, colour = groups)) + 
+  geom_line() +
+  geom_vline(xintercept = 1:12) + 
+  geom_point(size=2, shape=21, colour="grey50") +
+  scale_fill_manual(values=c("black","white")) + coord_polar()
+
+```
+
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+
+## # Parallel plot tst
+## library(freqparcoord)
+## data(mlb)
+
+## mlb %>% View
+
+## summary(mlb[,4:7])
+
+## # freqparcoord(mlb,-3,4:6)
+
+## freqparcoord(mlb,-3,4:6,7) # numerics and grouping after
+## colnames(parallelCoordsDf)
+## freqparcoord(x = parallelCoordsDf, m = 5, dispcols = c(4,5), grpvar = 2)
+## # install.packages('cdparcoor')
+## devtools::install_github("matloff/cdparcoodr")
+
+## library(cdparcoord)
+
+```
+
+# TODO: Use hierarchical clustering instead
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, eval=FALSE}
+
+## # install.packages("ape")
+## library(ape)
+
+## # dd <- dist(scale(USArrests), method = "euclidean")
+## pre_dist = pre_dist_multi_final[,-c(1)]
+## d = dist(pre_dist[,-1],
+##          method = "euclidean")
+
+
+## hc =  hclust(d, method = "ward.D2")
+
+
+## colors = c("red", "blue", "green", "black")
+## clus4 = cutree(hc, 4)
+## plot(as.phylo(hc), type = "fan", tip.color = colors[clus4],
+##      label.offset = 1, cex = 0.7)
+
+## ## -----
+
+## # install.packages('dendextend')
+## install.packages('ggdendro')
+## library(ggdendro)
+## library(dendextend)
+
+## dend = hc %>% as.dendrogram
+
+## ggd1 <- as.ggdend(dend)
+
+## ggplot(ggd1) 
+
+## ggd1$segments %>% View
+
+## ggd1$nodes %>% View
+
+## ggd1$labels %>% View
+
+## # Create a radial plot and remove labels
+## ggplot(ggd1, labels = FALSE) + 
+##   scale_y_reverse(expand = c(0.2, 0)) +
+##   coord_polar(theta="x")
+
+
+
+```

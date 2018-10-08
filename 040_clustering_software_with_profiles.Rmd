@@ -1,4 +1,8 @@
 
+
+
+
+
 ```{r}
 
 library(tidyverse)
@@ -183,13 +187,9 @@ labels_to_select_200 %>% View
 # "euclidean" 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'
 
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "canberra", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "euclidean", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "manhattan", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "minkowski", labels_to_select, 6))
-
 with(dev.new(), mds_n_plot(occupation_profiling_dist, "maximum", labels_to_select, 6))
 
 

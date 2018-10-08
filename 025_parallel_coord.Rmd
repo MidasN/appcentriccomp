@@ -1,0 +1,170 @@
+---
+title: "Untitled"
+mainfont: DejaVu Sans
+output:
+pdf_document:
+latex_engine: xelatex
+keep_tex: true
+html_document: default
+word_document: default
+font-family: Times New Roman
+---
+
+
+```{r include=FALSE}
+
+source('010_data_preprocessing.R')
+library(freqparcoord)
+
+
+```
+
+## device/os
+
+
+```{r}
+
+df_clean %>% select(RecordNo,Q85_1_1:Q85_1_5) %>% View
+
+
+```
+
+## respondents who use MS and IOS
+
+```{r}
+
+df_clean = zap_labels(df_clean) # removing labels
+
+## df_clean %>% filter(Q85_1_1 == 1 & Q85_1_2 == 1) %>% nrow()
+
+# SOLVED: number of OS used by respondent
+# TODO: to LPA
+
+dfDiversity = df_clean %>%
+  select(RecordNo, Q85_1_1:Q85_4_5) %>% 
+  replace(is.na(.), 0)  %>%
+  mutate(DesktopDiversity = rowSums(select(., contains("Q85_1_"))),
+         LaptopDiversity = rowSums(select(., contains("Q85_2_"))),
+         TabletDiversity = rowSums(select(., contains("Q85_3_"))),
+         MobileDiversity = rowSums(select(., contains("Q85_4_"))))  %>%
+  select(RecordNo, contains("Diversity"))
+
+
+## dfDiversity[dfDiversity$DesktopDiversity == 6, ] %>% View # outlier
+dfDiversity %>% filter_at(vars(contains("Diversity")), all_vars(. > 1)) %>% nrow() # exluding respondents who use several Os 
+
+
+```
+
+
+```{r}
+
+
+## df_clean %>% select(Q3_1, Q3_2, Q3_3, Q3_4) %>%
+##   summary() # checkibg NAs
+
+# desktop
+df_clean$Q85_1_1[df_clean$Q85_1_1 == 1] = "MS"
+df_clean$Q85_1_2[df_clean$Q85_1_2 == 1] = "IOS"
+df_clean$Q85_1_3[df_clean$Q85_1_3 == 1] = "Unix"
+df_clean$Q85_1_4[df_clean$Q85_1_4 == 1] = "Android"
+df_clean$Q85_1_5[df_clean$Q85_1_5 == 1] = "Other"
+df_clean$Q85_1_6[df_clean$Q85_1_6 == 1] = "Blackberry"
+
+# laptop
+df_clean$Q85_2_1[df_clean$Q85_2_1 == 1] = "MS"
+df_clean$Q85_2_2[df_clean$Q85_2_2 == 1] = "IOS"
+df_clean$Q85_2_3[df_clean$Q85_2_3 == 1] = "Unix"
+df_clean$Q85_2_4[df_clean$Q85_2_4 == 1] = "Android"
+df_clean$Q85_2_5[df_clean$Q85_2_5 == 1] = "Other"
+df_clean$Q85_2_6[df_clean$Q85_2_6 == 1] = "Blackberry"
+
+
+# tablet 
+df_clean$Q85_3_1[df_clean$Q85_3_1 == 1] = "MS"
+df_clean$Q85_3_2[df_clean$Q85_3_2 == 1] = "IOS"
+df_clean$Q85_3_3[df_clean$Q85_3_3 == 1] = "Unix"
+df_clean$Q85_3_4[df_clean$Q85_3_4 == 1] = "Android"
+df_clean$Q85_3_5[df_clean$Q85_3_5 == 1] = "Other"
+df_clean$Q85_3_6[df_clean$Q85_3_6 == 1] = "Blackberry"
+
+
+# mobile
+df_clean$Q85_4_1[df_clean$Q85_4_1 == 1] = "MS"
+df_clean$Q85_4_2[df_clean$Q85_4_2 == 1] = "IOS"
+df_clean$Q85_4_3[df_clean$Q85_4_3 == 1] = "Unix"
+df_clean$Q85_4_4[df_clean$Q85_4_4 == 1] = "Android"
+df_clean$Q85_4_5[df_clean$Q85_4_5 == 1] = "Other"
+df_clean$Q85_4_6[df_clean$Q85_4_6 == 1] = "Blackberry"
+
+df_clean = zap_labels(df_clean) # removing labels
+
+
+dfPlatformsTransformed = df_clean %>%
+  tidyr::gather(key = key, value = value, Q85_1_1:Q85_4_5, na.rm = TRUE)
+
+dfPlatformsTransformed$key %<>% str_replace_all("Q85_1_.", "desktopOs")
+dfPlatformsTransformed$key %<>% str_replace_all("Q85_2_.", "laptopOs")
+dfPlatformsTransformed$key %<>% str_replace_all("Q85_3_.", "tabletOs")
+dfPlatformsTransformed$key %<>% str_replace_all("Q85_4_.", "mobileOs")
+
+# deleting duplicates with 0 observations
+
+dfPlatformsTransformed = dfPlatformsTransformed[dfPlatformsTransformed$value != '0', ]
+
+
+df_clean %>% View
+
+# duplicates here principilly do not lead to mistake - 
+dfPlatformsTransformed[duplicated(dfPlatformsTransformed$RecordNo), ]
+
+dfPlatformsFinal = dfPlatformsTransformed %>%
+  ## mutate(nrow = 1:nrow(dfPlatformsTransformed)) %>%
+  group_by(RecordNo) %>%
+  tidyr::spread(key = key, value = value)
+
+# checking duplicates in respondents
+# UPDATE: there is gonna be NAs anyway
+
+# dfPlatformsFinal[duplicated(dfPlatformsFinal$RecordNo), ] %>% View
+# dfPlatformsFinal[dfPlatformsFinal$RecordNo == 246, ] %>% View
+
+dfPlatformsFinal %>% View
+
+
+```
+
+
+# device-specific grouping
+
+```{r}
+
+# I am using df_quas from 038_mds_with_Q8.Rmd
+
+df_quas
+
+deviceCoord = dfPlatformsFinal %>%
+  gather(key, val, Occupation) %>% 
+  dplyr::select(a, key, val) %>% 
+  group_by(a, val) %>% tally() %>%
+  spread(val, n, fill = 0)  %>%
+  ungroup()
+
+
+df_platformdf_quas
+
+
+
+```
+## Showing job shifts in connection with associated software is not possible due to NAs in Q21_1_open (previous job)   
+ SOLVED: transition plots for jobs - lack of information about previous
+ TODO: transition plots for education
+
+```{r}
+
+df_clean$Q18_1_open %>% as.factor() %>% summary()
+df_clean$Q21_1_open %>% as.factor() %>% summary()
+
+df_clean$profile_education %>% summary
+
+```

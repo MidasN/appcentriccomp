@@ -1,0 +1,388 @@
+---
+title: "Untitled"
+mainfont: DejaVu Sans
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+  html_document: default
+  word_document: default
+  font-family: Times New Roman
+---
+
+I am adding Q8v_2_* questions to MDS in this Script
+Q4-Q7 are questions regarding soft on different devices
+
+
+```{r}
+
+# source(knitr::purl("1_.Rmd", output = tempfile(), documentation = 0))
+
+source('010_data_preprocessing.R')
+
+library(tidyverse)
+library(magrittr)
+library(tidyLPA)
+
+library(ggplot2)
+library(ggpubr)
+
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+source("./functions.R")
+
+```
+
+Here I am excluding timing columns
+
+
+```{r}
+
+df_clean %<>%
+  dplyr::select(-c(page_pSC1_timing:tot_time))
+
+# df_clean %>% nrow
+na_vector = apply(df_clean, 2, function(x){
+
+  sum(is.na(x))
+
+})
+
+na_vector[na_vector > 0] # which variables produce most of the NAs
+df_final = df_clean %>% dplyr::select(
+                                      names(na_vector[na_vector == 0]),
+                                      -Occupation_Num, -status, -Occupation_DISCO,
+                                      -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
+                                      -c(Q21_1_open, Q22),
+                                      -c(Q18_1_open, Q18a),
+                                      -c(comments, Q4, Q5, Q6, Q7))
+
+
+# df_final %>% nrow
+# df_final %>% ncol
+
+```
+
+Based on the info about NAs in the following chunk I updated columns.csv
+UPD: not necessary right now 
+
+```{r}
+
+# FIXME: ?set not_mentioned?
+
+# Q24 - what industry do you work in
+# Q21 - what was your last (main) job titled
+# Q23 Did you work in the public or private sector
+# Q85_4_5: Mobile phone: other
+# Q85_4_6: Mobile phone: Blackbery OS
+
+# Less than 150 NAs:
+# Q20 - what industry do you work in
+# Q18 - what is your position/job title
+# Q19 - do you work in a public/private sector
+
+
+```
+
+Reordering variables to make values semi-continuous
+
+
+```{r}
+
+df_final$Q9[df_final$Q9 == 4] = 0
+df_final$Q10[df_final$Q10 == 4] = 0
+df_final$Q11[df_final$Q11 == 4] = 0
+df_final$Q12[df_final$Q12 == 4] = 0
+df_final$Q13[df_final$Q13 == 4] = 0
+df_final$Q14[df_final$Q14 == 4] = 0
+df_final$Q15[df_final$Q15 == 4] = 0
+df_final$Q16[df_final$Q16 == 4] = 0
+
+df_final$Q17_R = 6 - df_final$Q17
+
+
+```
+
+Description of items for LPA
+
+```{r}
+
+# Q1 - language
+
+# TODO: ask about numbers
+# Q3_1 - Desktop
+# Q3_2 - Laptop
+# Q3_3 - Tablet
+# Q3_4 - Mobile phone/Smartphone
+#
+
+# Q8_v2_1 - Built-in defand problem-solving
+# Q16 - updating IT skills
+
+
+# Q17_R - employment 
+
+
+
+```
+
+
+
+Here I am filtering software out of the top 9
+
+```{r}
+
+
+jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
+
+
+merged <- merge(x = software_cleaned[!(software_cleaned$a2 %in% (software_aggregated %>% top_n(9, n) %$% a2)),], # throwing away top 9
+                y = jobtitleanddescription,
+                by = "RecordNo") %>%
+  select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
+
+
+
+
+
+```
+
+
+TODO: remake the table with a `q` per `a2`
+FIXME: what I was doing wrong before I have not excluded repeated items per respondent
+# Fixing it
+
+
+```{r}
+
+
+merged_quas = merged[!is.na(merged$a2), ] %>% # removing NA's from the a column
+  dplyr::rename(a = a2) %>% # FIXME: loosing the information about the device used
+  select(-q)
+
+merged_quas = merged_quas %>%
+  group_by(RecordNo, a) %>%
+  mutate(n = n()) %>% dplyr::filter(n < 2) %>% dplyr::select(-n) %>%
+  ungroup() # moving out duplicates produced by Q4- and so on quesions
+
+
+```
+
+adding Q8 questions with quasi-ordinal scale
+
+```{r}
+
+# df_clean %>% colnames()
+
+df_quas = df_clean %>% select(RecordNo, Q8_v2_1:Q16)
+
+# anti_join(df_quas, merged_quas, by = "RecordNo") %>% View # 180 respondents are missing
+
+df_merged_quas = inner_join(df_quas, merged_quas, by = "RecordNo")
+# df_merged_quas %>% View
+
+
+```
+
+FIXME: think about how to adjust number of users  
+UPD: simple decision might be just to throw away software which is used less than by 5 respondents in the sample  
+
+```{r}
+
+pre_dist_multi = df_merged_quas %>% select(-Occupation) %>% 
+  group_by(a) %>% 
+  mutate_at(vars(Q8_v2_1:Q16),
+            funs("agr" = sum(.))) %>% mutate(n = n()) %>%
+  mutate_at(vars(Q8_v2_1_agr:Q16_agr),
+                   funs("norm" = . / n)) %>% 
+  select(-c(Q8_v2_1_agr:Q16_agr),
+         -c(Q8_v2_1:Q16))  %>%
+  dplyr::rename(respondents_quant = n)  %>%
+  filter(row_number() == 1)  %>%
+  ungroup() %>%  arrange(desc(respondents_quant)) # %>% View
+
+
+# pre_dist_multi$a %>% as.factor() %>% summary()
+# pre_dist_multi %>% View
+
+
+```
+
+grouping is made for occupations
+
+```{r}
+
+pre_dist_occupations = df_merged_quas %>%
+  gather(key, val, Occupation) %>% 
+  dplyr::select(a, key, val) %>% 
+  group_by(a, val) %>% tally() %>%
+  spread(val, n, fill = 0)  %>%
+  ungroup()
+
+
+# pre_dist_occupations$a %>% as.factor() %>% summary()
+
+```
+
+joining all together
+
+```{r}
+
+pre_dist_multi_final = inner_join(pre_dist_multi, pre_dist_occupations, by = "a")
+
+
+```
+
+Generally, each software item transcends from the respondent. 
+
+for each respondent we calculate the number of:  
+ - platforms used  
+ - OS used  
+ - OS used per platform  
+aggregate this per software item using mean() and treating them equally.  
+
+
+```{r}
+
+software_cleaned$RecordNo %>% unique() %>% length() # only 842 indicated the software they are using
+dfDiversity$RecordNo %>% unique() %>% length()
+
+
+df %>% filter(status == 1 & !is.na(Q85_1_1)) %>% nrow
+
+# software_cleaned$q %>% as.factor() %>% summary()
+
+software_cleaned = software_cleaned %>%
+  select(-a) %>%
+  dplyr::rename(a = a2)
+
+
+dfDiversity = df_clean %>%
+  select(RecordNo, Q85_1_1:Q85_4_5) %>%
+  replace(is.na(.), 0)  %>%
+  mutate(DesktopOsDiversity = rowSums(select(., contains("Q85_1_"))),
+         LaptopOsDiversity = rowSums(select(., contains("Q85_2_"))),
+         TabletOsDiversity = rowSums(select(., contains("Q85_3_"))),
+         MobileOsDiversity = rowSums(select(., contains("Q85_4_"))))  %>%
+  select(RecordNo, contains("Diversity"))
+
+dfDiversity %>% filter(DesktopOsDiversity > 1) %>% nrow() # 49 respondents use more than one OS for desktop
+dfDiversity %>% filter(LaptopOsDiversity > 1) %>% nrow() # 47 respondents use more than one OS for laptop
+dfDiversity %>% filter(TabletOsDiversity > 1) %>% nrow() # 36 respondents use more than one OS for tablet
+dfDiversity %>% filter(MobileOsDiversity > 1) %>% nrow() # 46 respondents use more than one OS for mobile
+
+# Are they are the same respondents?
+
+c(dfDiversity %>% filter(DesktopOsDiversity > 1) %$% RecordNo, dfDiversity %>% filter(LaptopOsDiversity > 1) %$% RecordNo,
+  dfDiversity %>% filter(TabletOsDiversity > 1) %$% RecordNo, dfDiversity %>% filter(MobileOsDiversity > 1) %$% RecordNo) %>% unique() %>% length() # 81 respondents in total use more than 1 OS regarding all platforms
+
+## library(dplyrExtras)
+inner_join(software_cleaned, df_clean %>% select(RecordNo, Q85_1_1:Q85_4_5), by = "RecordNo") %>% # View
+  mutate(g = ifelse(q == "Q4",
+                    rowSums(select(., contains("Q85_1_"))),
+                    NA)
+         ) %>% View
+
+  
+##  mutate_if(q == "Q4", tst = rowSums(select(., contains("Q85_1_"))))
+
+
+is.na(df_clean$Q85_1_1) %>% sum()
+df_clean %>% nrow()
+
+is.na(df_clean$Q85_3_1) %>% sum()
+
+is.na(df_clean$Q3_1) %>% sum()
+is.na(df_clean$Q3_2) %>% sum()
+
+
+df_clean %>% nrow()
+
+# anti_join(software_cleaned, dfDiversity, by = "RecordNo") %>% View
+# inner_join(software_cleaned, dfDiversity, by = "RecordNo") %$% RecordNo %>% unique() %>% length()
+
+```
+exclude respondents who use multiple OS in order to uniquely attribute software items across devices and OS
+
+```{r}
+
+
+software_clean_unique = software_cleaned %>%
+  filter(!(RecordNo %in% (c(dfDiversity %>% filter(DesktopOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(LaptopOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(TabletOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(MobileOsDiversity > 1) %$% RecordNo) %>% unique())))
+
+df_clean_unique = df_clean %>%
+  filter(!(RecordNo %in% (c(dfDiversity %>% filter(DesktopOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(LaptopOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(TabletOsDiversity > 1) %$% RecordNo,
+                            dfDiversity %>% filter(MobileOsDiversity > 1) %$% RecordNo) %>% unique())))
+
+
+
+
+```
+
+
+```{r}
+
+
+
+inner_join(software_clean_unique, df_clean_unique %>% select(RecordNo, Q85_1_1:Q85_4_5),
+           by = "RecordNo") %>% View
+
+
+  mutate(g = ifelse(q == "Q4",
+                    rowSums(select(., contains("Q85_1_"))),
+                    NA)
+         ) %>% View
+
+  
+##  mutate_if(q == "Q4", tst = rowSums(select(., contains("Q85_1_"))))
+
+
+
+```
+
+
+# Pre-MDS data preparation, scaling  
+
+Scaling Before MDS, results are even worse    
+UPD: scaling should be accomplished for all of the vars, another fix
+
+```{r}
+
+pre_dist_multi_final %>% colnames()
+
+## scaling only for occupations since they represent absolute frequencies
+
+pre_dist_multi_final[,-c(1:16)] %<>% apply(2, function(X) scale(X))
+
+
+# pre_dist_multi_final[,-c(1:3)] %<>% apply(2, function(X) scale(X, center = FALSE))
+
+pre_dist_multi_final %>% View
+## pre_dist_multi_final$a %>% as.factor() %>% summary()
+
+```
+
+# MDS includes only survey items
+
+"euclidean" 'maximum' 'manhattan' 'minkowski' 'canberra' 'binary'  
+manhattan is good  
+canberra - great division  
+
+
+```{r}
+
+p = flexible_clustering(pre_dist_multi_final, "canberra", 5, 12, 11)
+
+ggsave(device="png", plot=p, filename="./plots/kmeans_canberra.png",
+       scale=.2, height = 1024, width = 1024, units = "mm")
+
+p
+
+```

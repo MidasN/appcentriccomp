@@ -1,0 +1,82 @@
+---
+title: "Descriptive Statistics"
+mainfont: DejaVu Sans
+output:
+  pdf_document:
+    latex_engine: xelatex
+    keep_tex: true
+  html_document: default
+  word_document: default
+  font-family: Times New Roman
+---
+
+
+```{r}
+
+library(tidyselect)
+library(skimr)
+
+```
+
+```{r}
+
+## library(skimr)
+
+## # config
+## skim_with(numeric = list(p0 = NULL, p25 = NULL, p75 = NULL, p100 = NULL, missing = NULL, complete = NULL))
+
+## skim(pre_dist_multi_final[,-c(1, 16:ncol(pre_dist_multi_final))] %>% select(-respondents_quant))
+
+
+```
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, results = 'asis'}
+
+# config
+skim_with(numeric = list(p0 = NULL, p25 = NULL, p75 = NULL, p100 = NULL, missing = NULL, complete = NULL))
+
+skim(pre_dist_multi_final[,-c(1, 16:ncol(pre_dist_multi_final))] %>% select(-respondents_quant)) %>%
+  kable(format = "latex", booktabs = T)
+
+```
+
+
+# Software Items
+
+## Using information about the OS to cluster software items
+
+### point
+
+Generally, each software item transcends from the respondent. 
+
+for each respondent might be calculate the number of:  
+ - platforms used  
+ - OS used  
+ - OS used per platform  
+aggregate this per software item using mean() and treating them equally.  
+
+### couldn't be made
+
+Only `df %>% filter(status == 1 & !is.na(Q85_1_1)) %>% nrow` respondents answered on questions which OS they use on different devices.
+
+
+# Respondents  
+
+## FIXME: due to the lots of NAs on Q85_* items, skip this and use Q4* items instead
+
+```{r}
+
+dfDiversity %>% filter(DesktopOsDiversity > 1) %>% nrow() # 49 respondents use more than one OS for desktop
+dfDiversity %>% filter(LaptopOsDiversity > 1) %>% nrow() # 47 respondents use more than one OS for laptop
+dfDiversity %>% filter(TabletOsDiversity > 1) %>% nrow() # 36 respondents use more than one OS for tablet
+dfDiversity %>% filter(MobileOsDiversity > 1) %>% nrow() # 46 respondents use more than one OS for mobile
+
+# Are they are the same respondents?
+
+c(dfDiversity %>% filter(DesktopOsDiversity > 1) %$% RecordNo, dfDiversity %>% filter(LaptopOsDiversity > 1) %$% RecordNo,
+  dfDiversity %>% filter(TabletOsDiversity > 1) %$% RecordNo, dfDiversity %>% filter(MobileOsDiversity > 1) %$% RecordNo) %>% unique() %>% length() # 81 respondents in total use more than 1 OS regarding all platforms
+
+
+
+```
+

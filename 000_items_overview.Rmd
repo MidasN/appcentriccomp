@@ -1,0 +1,74 @@
+---
+title: "0_items_overview.Rmd"
+mainfont: DejaVu Sans
+output:
+pdf_document:
+latex_engine: xelatex
+keep_tex: true
+html_document: default
+word_document: default
+font-family: Times New Roman
+---
+
+# device/os
+
+```{r}
+
+## filters
+
+# Q3_1 - desktop
+# Q3_2 - laptop
+# Q3_3 - tablet
+# Q3_4 - mobile/smartphone
+
+## Values
+
+# Q85_1_1 - _1_6 - desktop OS
+# Q85_2_1 - _2_6 - laptop OS
+# Q85_3_1 - _3_6 - tablet OS
+# Q85_4_1 - _4_6 - mobile/smartphone OS
+
+## Software
+
+# Q4 - desktop/laptop
+# Q5 - mobile apps
+# Q6 - tablet apps
+# Q7 - web apps - multideviced
+
+
+```
+
+# job/education
+
+```{r}
+
+
+## Past
+# Q21_1_open:Q22 - previous job titles + tasks description
+# Q23 Did you work in the public or private sector
+
+## Current
+# Q20 - what industry do you work in
+# Q18 - what is your position/job title
+# Q18_1_open:Q18_a - job title + tasks description
+
+## TODO: public/private sector
+# Q19 - do you work in a public/private sector
+
+## TODO: add industry
+# Q24 - what industry do you work in
+
+
+
+```
+
+# other   
+
+```{r}
+
+
+# Q1 - language
+# Q17_R - employment 
+
+
+```
