@@ -8,7 +8,5 @@
 .Rhistory
 .emacs.desktop.*
 .projectile
-.*_cache/
-.*_files/
 /data_transform_meta
 data/KnowledgeWorkerSurvey_originaldata.sav
