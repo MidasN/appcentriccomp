@@ -2,6 +2,8 @@
 /data_transform_meta/.*
 /data
 /data/.*
+/reports/.*
+!/reports/.*.pdf
 /schemas
 /data_transform_meta
 data/KnowledgeWorkerSurvey_originaldata.sav
