@@ -5,5 +5,12 @@
 /reports/.*
 !/reports/.*.pdf
 /schemas
+.Rhistory
+.emacs.desktop.*
+.projectile
+/.*_cache
+/.*_cache/.*
+/.*_files
+/.*_files/.*
 /data_transform_meta
 data/KnowledgeWorkerSurvey_originaldata.sav
