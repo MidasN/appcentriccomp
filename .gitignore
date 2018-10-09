@@ -2,8 +2,8 @@
 /data_transform_meta/.*
 /data
 /data/.*
-/reports/.*
-!/reports/.*.pdf
+reports/.*
+!reports/.*.pdf
 /schemas
 .Rhistory
 .emacs.desktop.*
