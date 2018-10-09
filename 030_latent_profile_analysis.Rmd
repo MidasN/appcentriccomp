@@ -10,8 +10,13 @@ output:
   font-family: Times New Roman
 ---
 
+Generally, this is the variation of the software classification, though, in the center of it respondents and instead of MDS and K-mean Latent Profile Analysis is used. Firstly, it is convenient wrapper, secondly, it is specifically suited for the survey kind of data. What I haven't used yet, though, might be useful is fixed/freed/random means across various profiles - they might represent our expectations about the profiles characteristic, such as mean age or typical occupation.   
 
-```{r}
+
+**What else could it be used for**: in the next report I will try to make LPA on Occupation+Education+Age and use profiles probability to map software
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 
 source('010_data_preprocessing.R')
 
@@ -23,20 +28,22 @@ library(mclust)
 library(forcats)
 library(hrbrthemes)
 
+library(knitr)
+library(kableExtra)
+
+library(graphics)
+library(PMCMR)
+
+
 source("./functions.R")
 
 ```
 
-Showing job shifts in connection with associated software is not possible due to NAs in Q21_1_open (previous job)
+Showing job shifts in connection with associated software is not possible due to NAs in Q21_1_open (previous job): there is `r sum(df_clean$Q22 == "")` NAs, while the total complete sample is `r nrow(df_clean)`.   
 
-TODO: what I need to do is to consider public/private sector
-Q19 - do you work in a public/private sector
 
-```{r, include=TRUE, echo=FALSE, warning=FALSE, message=FALSE}
-
-df_clean$Q22 %>% as.factor() %>% summary()
-
-```
+TODO: what I need to do is to consider public/private sector   
+Q19 - do you work in a public/private sector   
 
 
 ```{r, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
@@ -62,9 +69,8 @@ df_final = df_clean %>% dplyr::select(
                                       -c(Q18_1_open, Q18a),
                                       -c(comments, Q4, Q5, Q6, Q7))
 
-
-df_final %>% nrow
-df_final %>% ncol
+## df_final %>% nrow
+## df_final %>% ncol
 
 ```
 
@@ -87,9 +93,10 @@ df_final$Q17_R = 6 - df_final$Q17
 
 ```
 
-Description of items for LPA
+## Description of items for LPA   
 
-```{r}
+
+```{r, include=TRUE}
 
 # Q1 - language
 
@@ -113,10 +120,10 @@ Description of items for LPA
 ```
 
 
-Latent Profile Analysis
+Latent Profile Analysis is used in social science and educational research. It suits the needs to aggregate reprogrammability items, though, need to check how it will deal with Occupations and SES.
 
 
-```{r}
+```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 
 # Q17 - employment status, using Reversed Ordered Q17_R instead
 
@@ -132,21 +139,33 @@ colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
 
 ```
 
-Number of profiles to choose - analytically - less BIC is better
+Number of profiles to choose - analytically - **less BIC is better**.  
 
-```{r}
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
 
 fit_output = explore_model_fit(d %>% dplyr::select(colnames_lpa),
                                n_profiles_range = 1:6)
 
 
-fit_output %>% View
+fit_output %>% knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T) 
 
 ```
 
-Number of profiles to choose - visually
+**Number of profiles to choose - visually**
 
-```{r}
+
+Freed variance - variance might vary across the groups. Constrained variance means that profiles are chosen according to the assumption that variance should be closely the same in all of the profiles. Fixed variance indicates the strength of this assumption, so, variance is less then in case of Constrained Variance.   
+
+In it's turn, covariance indicate the degree of variation for interconnection of variables across profiles. Basic example - income should be equally connected with education across all profiles in case of fixed covariance.   
+
+Two models are plotted:
+
+- Constrained variance, fixed covariance
+- Constrained variance, constrained covariance (+)
+
+Based on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 
 to_plot = fit_output %>%
   gather(`Covariance matrix structure`, val, -n_profiles) %>% 
@@ -154,29 +173,26 @@ to_plot = fit_output %>%
          val = abs(val)) # this is to make the BIC values positive (to align with more common formula / interpretation of BIC)
 
 
-to_plot$`Covariance matrix structure` = fct_relevel(to_plot$`Covariance matrix structure`,
-                                                    "Constrained variance, fixed covariance",
-                                                    "Freed variance, fixed covariance",
-                                                    "Constrained variance, constrained covariance",
-                                                    "Freed variance, freed covariance")
+to_plot$`Covariance matrix structure` = forcats::fct_relevel(to_plot$`Covariance matrix structure`,
+                                                             "Constrained variance, fixed covariance",
+                                                             "Freed variance, fixed covariance",
+                                                             "Constrained variance, constrained covariance",
+                                                             "Freed variance, freed covariance")
 
 # Based on plot, either 3 or 4 profiles should be setted up
 
-ggplot(to_plot,
+ggplot(data = to_plot,
        aes(x = n_profiles, y = val, color = `Covariance matrix structure`, group = `Covariance matrix structure`)) +
-  geom_line() +
-  geom_point() +
-  ylab("BIC (smaller value is better)") +
-  theme_ipsum_rc()
+  geom_line() + geom_point() + ylab("BIC (smaller value is better)") # + theme_ipsum_rc()
 
 
 ```
 
-SOLVED: exclude binary variables from LPA
-# OLD: Best on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2
+Choosing the model with 5 profiles.
 
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 
-```{r}
+## SOLVED: exclude binary variables from LPA
 
 m3 = estimate_profiles(d,
                        colnames_lpa,
@@ -188,15 +204,238 @@ m3 = estimate_profiles(d,
 ```
 
 
-Plotting 
+```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 
-
-```{r}
-
+## Plotting 
 # RColorBrewer::brewer.pal(n, pal)
 # https://www.r-bloggers.com/how-to-expand-color-palette-with-ggplot-and-rcolorbrewer/
 
-plot_profiles(m3[, !(colnames(m3) %in% vars_to_exclude)])
+## plot_profiles(m3[, !(colnames(m3) %in% vars_to_exclude)])
 
+
+```
+
+# Plotting   
+
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE, fig.cap = "Reprogrammability Items Across Profiles: Will make a bit more sense later in conjunction with Occupations", dev='png', fig.width=14, fig.height=12}
+
+
+## m3 = estimate_profiles(d,
+##                        colnames_lpa,
+##                        n_profiles = , 
+##                        model = 2,
+##                        return_orig_df = T)
+
+
+q8_plot = plot_profiles(m3[, c("Q8_v2_1", "Q8_v2_2", "Q8_v2_3", "Q8_v2_4", "profile", "posterior_prob")])
+
+q8_plot
+
+## ggsave(device="png", plot=q8_plot, filename="./plots/q8_plot.png", scale=.2, height = 1024, width = 1024, units = "mm")
+
+
+```
+
+Here just a brief description I made in Overleaf some time ago.
+
+Using Latent Profile Analysis 5 consistent groups of respondents were extracted. 1st profile is the largest one (588), respondents in other profiles are distributed more or less uniformaly.   
+
+Figure 1 demonstrates profile differences of responses about extension or reprogrammability of software. Firstly, it should be noted that respondents across all of the profiles tend to change built-in settings of the software they are using. Notably, the the respondents from *1 profile* have one of the lowest dispersion on this item. This might mean that while respondents from 1 profile are not using plugins, scripting or reprogram their software, their generally tend to fit the programms to their own need exploiting the highest possible level of it (settings).  
+
+The respondents stressed out as being out of *2nd profile* are tend to use scripting for software extension in much larger extent than respondents of other profiles. Generally, the pattern is that based on all 4 response items regarding the extensibility of software they tend to have higher medians. ICT employees are more highly prominent in *profile 2*.  
+
+Typical respondent of *Profile 3* generally tweak software much less, than respondents from other profiles, though, it is the only case where users are equally not changing settings nor using plugins.  Based on the pearson residuals, health workers are prominently highlighted to be in the 3rd profile (the percentage of health workers tend to be highest, while absolute number is still twice as low as in 1rd profile). While for users of some occupations changing settings might not lead damaging consequences, in health service one should have a strong understanding of how the software works in order to obtain predictable outcomes. (Soft. systems are black boxes, probably, for most users. Tweaking them in health service might be dangerous. Or it might be that they are principally hardly accessible for changing defaults. Or health guys just do not posses enough knowledge. Anyway, it is just a one point for discussion about different standards for software extensibility across industries).    
+
+Figure 2 indicates that chief executives even though being the one of the less smallest group of respondents are not typical for the 1 profile, though, prominent for the *4th* and less for *5th*, both in relative and absolute numbers. Those two profiles tend to change defaults less than users from *profile 1 and profile 2*. One interesting point is that a respondent from profile 5 is, to some extent, balanced in using different levels of changing the software, which might be seen from the equal medians on items about plugin, scripts and reprogramming use.   
+
+
+## Figuring out which Occupations prominent for each of the profile
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE, fig.cap = 'MosaicPlot - blue color indicates that occupation is prominent more than expected, red - less than expected', dev='png', fig.width=14, fig.height=12}
+
+corr_m3 = m3 %>%
+  group_by(profile, Occupation) %>%
+  tally() %>%
+  tidyr::spread(Occupation, n)
+
+
+## png("./plots/mosaic_occupation_profile.png",
+##     widt = 1024, height = 1024, units = "px", pointsize = 26)
+
+mosaicplot(corr_m3[,-1], shade = TRUE, las=2, main = "Occupations per Profile")
+dev.off()
+
+
+```
+
+# Statistical Testing Block
+
+Here I am constructing simple variables like number of:  
+
+ - unique software used  = n_unique_soft
+ - unique software use per device  
+ - software used out of the top-10 popular items  = n_unique_soft_non_pop
+ - software use out of the top-10 popular per device = n_unique_soft_per_q_non_pop^[I used camelCase versions of the variables later - latex does not get well with "__" symbols].
+ 
+ 
+I do not completely understand which theoretical constructs they do represent yet, but found them useful in testing differences between profiles later.
+
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+
+vars1 = software_cleaned  %>%
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft = n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q = n()) %>%
+  ungroup() %>% dplyr::select(-a, -q)
+
+## Number of software used out of top-10
+
+vars2 = software_cleaned  %>%
+  filter(!(.$a2 %in% (software_aggregated %>% top_n(10, n) %$% a2))) %>% 
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft_non_pop = n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q_non_pop = n()) %>%
+  ungroup() %>% dplyr::select(-a, -q)
+
+tmp = inner_join(m3, vars2, by = "RecordNo")
+tmp1 = inner_join(m3, vars1, by = "RecordNo")
+
+#### Stat - Occupation/Profile
+
+## m3 %>%
+##   group_by(profile, Occupation) %>%
+##   tally() %>%
+##   dplyr::mutate(perc_per_profile = n / sum(n) * 100) %>%
+##   ungroup() %>%
+##   dplyr::mutate(perc_total = n / sum(n) * 100) %>% View
+
+
+
+```
+
+##  Testing difference between reprogrammibility capabilities across Profiles
+
+In the current case when the LPA was accomplished considering difference in the Q8_v2_ items it doesn't make much sense to compare them statistically across profiles, but still might give some information about profiles/
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+#  might be kinda cool in conjunction with smth else, elaborate on this
+# Those capable of reprogramming and those who are not tend to use the same amount of soft. Check for occupations later
+
+# not a rocket science, it is signigifant everywhere
+kruskal.test(data = m3, Q8_v2_1 ~ profile)
+kruskal.test(data = m3, Q8_v2_2 ~ profile)
+kruskal.test(data = m3, Q8_v2_3 ~ profile)
+kruskal.test(data = m3, Q8_v2_4 ~ profile)
+
+```
+
+## Post hoc testing 
+
+
+While we know, that there is a difference across profiles, we don't know which profiles have differences (all of them?). 
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+
+pairwise.wilcox.test(m3$Q8_v2_1,
+                     m3$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$%
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+pairwise.wilcox.test(m3$Q8_v2_2,
+                     m3$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$%
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+pairwise.wilcox.test(m3$Q8_v2_3,
+                     m3$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$%
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+pairwise.wilcox.test(m3$Q8_v2_4,
+                     m3$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$%
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+
+```
+
+### Plot the differences across profiles
+TODO: put significance levels
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE, fig.cap = "Difference in Soft Used out Of Top-10 Across Profiles", dev='png', fig.width=14, fig.height=12}
+
+tmp %<>% group_by(profile) %>%
+  mutate_at(vars(n_unique_soft_non_pop), funs("median" = median(.)))
+
+
+ggpubr::ggboxplot(data = tmp, y = "n_unique_soft_non_pop", x = "profile", color = "profile") +
+  geom_text(data = tmp, aes(x = profile, y = median + 1, label = median))
+
+
+```
+
+## Turning Back  
+
+Let's return to the variables we've constructed earlier - since they were not included into the LPA it makes much more sense to include them in profile difference hypotheses testing.  
+
+We use bonferroni p-value adjustment since we simultaneously testing several hypotheses. P-values smaller than .05 indicate difference in groups given variable. I have not provided interpretation yet, since LPA and grouping might and probably will be changed.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+tmp %<>% dplyr::rename(nUniqueSoftPerqNonPop = n_unique_soft_per_q_non_pop,
+                       nUniqueSoftNonPop = n_unique_soft_non_pop)
+
+tmp1 %<>% dplyr::rename(nUniqueSoft = n_unique_soft)
+
+## n_unique_soft
+## n_unique_soft_non_pop
+## n_unique_soft_per_q_non_pop
+
+## tmp = inner_join(m3, vars2, by = "RecordNo")
+## tmp1 = inner_join(m3, vars1, by = "RecordNo")
+
+
+pairwise.wilcox.test(tmp$nUniqueSoftPerqNonPop,
+                     tmp$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$%
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+pairwise.wilcox.test(tmp$nUniqueSoftNonPop,
+                     tmp$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE) %$% 
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
+
+
+pairwise.wilcox.test(tmp1$nUniqueSoft,
+                     tmp$profile,
+                     p.adjust.method="bonferroni",
+                     paired = FALSE)  %$% 
+  knitr::kable(x = p.value, digits = 3, caption = data.name) %>%
+  kable_styling(bootstrap_options = "striped", full_width = T)
 
 ```

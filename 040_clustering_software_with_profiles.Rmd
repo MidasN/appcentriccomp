@@ -1,4 +1,14 @@
-
+---
+title: "0_items_overview.Rmd"
+mainfont: DejaVu Sans
+output:
+pdf_document:
+latex_engine: xelatex
+keep_tex: true
+html_document: default
+word_document: default
+font-family: Times New Roman
+---
 
 
 
