@@ -1,12 +1,9 @@
-/schemas/.*
-/data_transform_meta/.*
-/data
-/data/.*
-reports/.*
+schemas/
+data_transform_meta/
+data/
+reports/
+data_transform_meta/
 !reports/.*.pdf
-/schemas
 .Rhistory
 .emacs.desktop.*
 .projectile
-/data_transform_meta
-data/KnowledgeWorkerSurvey_originaldata.sav
