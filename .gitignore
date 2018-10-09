@@ -1,5 +1,7 @@
 /schemas/.*
 /data_transform_meta/.*
+/data
+/data/.*
 /schemas
 /data_transform_meta
 data/KnowledgeWorkerSurvey_originaldata.sav

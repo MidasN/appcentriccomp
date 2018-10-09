@@ -1,0 +1,125 @@
+;; -*- mode: emacs-lisp; coding: emacs-mule; -*-
+;; --------------------------------------------------------------------------
+;; Desktop File for Emacs
+;; --------------------------------------------------------------------------
+;; Created Mon Oct  8 20:45:42 2018
+;; Desktop file format version 208
+;; Emacs version 25.3.2
+
+;; Global section:
+(setq desktop-saved-frameset [frameset 1 (23483 42454 828514 614000) (desktop . "208") "stlk@stlk-ThinkPad-X220" nil nil ((((font-backend xft x) (font . "-simp-Hack-normal-normal-normal-*-13-*-*-*-m-0-iso10646-1") (font-parameter) (border-width . 0) (internal-border-width . 0) (right-divider-width . 0) (bottom-divider-width . 0) (vertical-scroll-bars) (horizontal-scroll-bars) (foreground-color . "#F8F8F2") (background-color . "#272822") (mouse-color . "#F8F8F2") (border-color . "black") (screen-gamma) (line-spacing) (left-fringe . 8) (right-fringe . 8) (scroll-bar-foreground) (scroll-bar-background) (menu-bar-lines . 1) (tool-bar-lines . 0) (title) (wait-for-wm . t) (tool-bar-position . top) (icon-type . t) (auto-raise) (auto-lower) (cursor-type . box) (scroll-bar-width . 0) (scroll-bar-height . 0) (alpha) (fullscreen . maximized) (display-type . color) (background-mode . dark) (cursor-color . "#F8F8F2") (sticky) (environment) (powerline-cache) (frameset--id . "F181-D022-BB96-1425") (frameset--mini t . t) (modeline . t) (minibuffer . t) (unsplittable) (icon-name) (display . ":0") (explicit-name) (visibility . t) (height . 88) (width . 318) (left . 1920) (top . 32)) ((min-height . 4) (min-width . 10) (min-height-ignore . 3) (min-width-ignore . 4) (min-height-safe . 1) (min-width-safe . 2) (min-pixel-height . 60) (min-pixel-width . 80) (min-pixel-height-ignore . 45) (min-pixel-width-ignore . 32) (min-pixel-height-safe . 15) (min-pixel-width-safe . 16)) leaf (pixel-width . 2560) (pixel-height . 1317) (total-width . 320) (total-height . 88) (normal-height . 1.0) (normal-width . 1.0) (buffer "020_mds_clustering.Rmd[poly-head-tail]" (selected . t) (hscroll . 0) (fringes 8 8 nil) (margins nil) (scroll-bars nil 0 t nil 0 t) (vscroll . 0) (dedicated) (point . 22608) (start . 21039))))])
+(setq desktop-missing-file-warning nil)
+(setq tags-file-name nil)
+(setq tags-table-list nil)
+(setq register-alist nil)
+(setq file-name-history '("~/.emacs.d/network-security.data" "~/.emacs.d/init.el" "~/.emacs.d/stlk_init.org" "~/Dropbox/orgfiles/snippets.org" "~/Dropbox/orgfiles/main.org" "~/Dropbox/orgfiles/links.org" "~/Dropbox/orgfiles/gcal.org" "~/Dropbox/orgfiles/elfeed.org" "~/Dropbox/orgfiles/current.org" "~/Dropbox/orgfiles/Danish.org" "~/projects/appcentriccomp/015_exploring.Rmd" "~/projects/appcentriccomp/000_items_overview.Rmd" "~/projects/appcentriccomp/020_mds_clustering.Rmd" "~/.emacs.d/bookmarks" "~/projects/appcentriccomp/010_data_preprocessing.R" "~/projects/appcentriccomp/025_parallel_coord.Rmd" "~/projects/appcentriccomp/030_latent_profile_analysis.Rmd" "~/.emacs.d/stlk_init.el" "~/projects/appcentriccomp/.projectile" "~/projects/appcentriccomp/040_clustering_software_with_profiles.Rmd" "~/.emacs.d/stlk_unused.org"))
+
+;; Buffer section -- buffers listed in same order as in buffer list:
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/020_mds_clustering.Rmd"
+  "020_mds_clustering.Rmd[poly-head-tail]"
+  'markdown-mode
+  '(override-global-mode global-auto-revert-mode flyspell-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode pandoc-mode smartparens-mode rainbow-delimiters-mode)
+  22608
+  '(nil nil)
+  nil
+  nil
+  '((tab-width . 4) (buffer-file-coding-system . undecided-unix) (overwrite-mode) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/.emacs.d/stlk_init.org"
+  "stlk_init.org"
+  'org-mode
+  '(override-global-mode global-auto-revert-mode flyspell-mode projectile-mode google-this-mode org-indent-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode)
+  35977
+  '(34113 nil)
+  nil
+  nil
+  '((indent-tabs-mode) (buffer-file-coding-system . utf-8-unix) (truncate-lines))
+  '((mark-ring (34113 33825 34113))))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/015_exploring.Rmd"
+  "015_exploring.Rmd[poly-head-tail]"
+  'markdown-mode
+  '(override-global-mode global-auto-revert-mode flyspell-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode pandoc-mode smartparens-mode rainbow-delimiters-mode)
+  3959
+  '(nil nil)
+  nil
+  nil
+  '((tab-width . 4) (buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/015_exploring.Rmd"
+  "015_exploring.Rmd"
+  'markdown-mode
+  '(override-global-mode global-auto-revert-mode flyspell-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode pandoc-mode smartparens-mode)
+  1134
+  '(nil nil)
+  nil
+  nil
+  '((tab-width . 4) (buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/015_exploring.Rmd"
+  "015_exploring.Rmd"
+  'markdown-mode
+  '(override-global-mode global-auto-revert-mode flyspell-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode pandoc-mode smartparens-mode rainbow-delimiters-mode)
+  1134
+  '(nil nil)
+  nil
+  nil
+  '((tab-width . 4) (buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/010_data_preprocessing.R"
+  "010_data_preprocessing.R"
+  'ess-mode
+  '(override-global-mode global-auto-revert-mode projectile-mode google-this-mode company-mode eldoc-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode smartparens-mode rainbow-delimiters-mode flycheck-mode)
+  3849
+  '(nil nil)
+  nil
+  nil
+  '((indent-tabs-mode) (buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/.emacs.d/network-security.data"
+  "network-security.data"
+  'fundamental-mode
+  '(override-global-mode global-auto-revert-mode projectile-mode google-this-mode which-key-mode git-gutter-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode)
+  1
+  '(nil nil)
+  nil
+  nil
+  '((buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/020_mds_clustering.Rmd"
+  "020_mds_clustering.Rmd[poly-head-tail][r]"
+  'ess-mode
+  '(override-global-mode global-auto-revert-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode eldoc-mode which-key-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode smartparens-mode rainbow-delimiters-mode flycheck-mode)
+  22605
+  '(nil nil)
+  nil
+  nil
+  '((indent-tabs-mode) (buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
+(desktop-create-buffer 208
+  "/home/stlk/projects/appcentriccomp/020_mds_clustering.Rmd"
+  "020_mds_clustering.Rmd[poly-head-tail][poly-head-tail]"
+  'poly-head-tail-mode
+  '(override-global-mode global-auto-revert-mode poly-markdown+r-mode projectile-mode google-this-mode company-mode which-key-mode back-button-mode beacon-mode yas-minor-mode helm-mode visual-line-mode ivy-mode smartparens-mode rainbow-delimiters-mode)
+  22608
+  '(nil nil)
+  nil
+  nil
+  '((buffer-file-coding-system . undecided-unix) (truncate-lines))
+  '((mark-ring nil)))
+
