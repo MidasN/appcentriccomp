@@ -263,7 +263,7 @@ corr_m3 = m3 %>%
 ## png("./plots/mosaic_occupation_profile.png",
 ##     widt = 1024, height = 1024, units = "px", pointsize = 26)
 
-mosaicplot(corr_m3[,-1], shade = TRUE, las=2, main = "Occupations per Profile")
+mosaicplot(corr_m3[, -1], shade = TRUE, las = 2, main = "Occupations per Profile")
 dev.off()
 
 

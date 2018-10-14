@@ -1,5 +1,5 @@
 ---
-title: "0_items_overview.Rmd"
+title: "3_Using_Latent_Profiles_for_Software_Aggregation.Rmd"
 mainfont: DejaVu Sans
 output:
 pdf_document:
@@ -15,12 +15,30 @@ font-family: Times New Roman
 
 ```{r}
 
+
+source('010_data_preprocessing.R')
+
 library(tidyverse)
 library(magrittr)
+library(tidyLPA)
+
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+library(knitr)
+library(kableExtra)
+
+library(graphics)
+library(PMCMR)
+
 library(gridExtra)
+
 source("./functions.R")
 
 ```
+
+
 
 Extracting profile and prob associated with the person
 

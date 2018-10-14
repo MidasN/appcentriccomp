@@ -1,0 +1,400 @@
+---
+title: "5_Using_Latent_Profiles_for_Software_Mapping"
+mainfont: DejaVu Sans
+output:
+pdf_document:
+latex_engine: xelatex
+keep_tex: true
+html_document: default
+word_document: default
+font-family: Times New Roman
+---
+
+
+```{r}
+
+
+source('010_data_preprocessing.R')
+
+library(tidyverse)
+library(magrittr)
+library(tidyLPA)
+
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+library(knitr)
+library(kableExtra)
+
+library(graphics)
+library(PMCMR)
+
+library(gridExtra)
+
+source("./functions.R")
+
+```
+
+
+```{r}
+
+
+Q85_1_1_Q85_1_5
+Q85_2_1_Q85_2_5
+Q85_3_1_Q85_3_5
+Q85_4_1_Q85_4_5
+
+
+Q17 - employment status # intention to work
+# df_clean$Q17 %>% summary()
+
+df_clean$Q17_R = 6 - df_clean$Q17
+
+
+Q18 - job title # use Occupation instead
+df_clean$Q18 %>% summary()
+
+df_clean$Occupation %>% unique()
+# TODO: make occupations binary
+
+## Occupation is binary 
+## tmp = df_clean %>%
+##   gather(key, val, Occupation) %>% 
+##   dplyr::select(RecordNo, key, val) %>% 
+##   group_by(RecordNo, val) %>% tally() %>%
+##   spread(val, n, fill = 0)  %>%
+##   ungroup()
+
+# df_pre_lpa = inner_join(df_clean, tmp, by = "RecordNo")
+
+
+# Q19 - private/public sector
+df_clean$Q19[df_clean$Q19 == 1] = "Private"
+df_clean$Q19[df_clean$Q19 == 2] = "Public"
+df_clean$Q19[is.na(df_clean$Q19)] = "Not_Indicated"
+
+# df_clean %>% apply(2, is.na)
+
+#df_clean$Q19 %>% as.factor() %>% summary()
+
+
+Q20 - industry
+df_clean$Q20 %>% summary()
+# TODO: Q20 - decrease number of level
+
+# Q22 - not include, but check
+
+df_clean$gender[df_clean$gender == 1] = "w"
+df_clean$gender[df_clean$gender == 2] = "m"
+
+
+df_clean$profile_age1
+
+df_clean$region[df_clean$region == 1] = "Hovedstaden"
+df_clean$region[df_clean$region == 2] = "Sjælland"
+df_clean$region[df_clean$region == 3] = "Syddanmark"
+df_clean$region[df_clean$region == 4] = "Midtjylland"
+df_clean$region[df_clean$region == 5] = "Nordjylland"
+
+
+
+# Education
+df_clean$profile_education 
+# df_clean$ed_not_indicated = ifelse(df_clean$profile_education == 9, 1, 0) # those, not indicated education might indicate lowest/highest levels of skill
+df_clean$device_category # higher value - higher agency of device
+
+
+df_final = df_clean %>% dplyr::select(RecordNo,
+                                      ## Q85_1_1:Q85_4_5,
+                                      Q17_R,
+                                      Occupation,
+                                      Q19,
+                                      gender,
+                                      region,
+                                      profile_education,
+                                      profile_age1,
+                                      device_category)
+
+
+
+```
+
+
+# Statistical Testing Block
+
+Here I am constructing simple variables like number of:  
+
+ - unique software used  = n_unique_soft
+ - unique software use per device  
+ - software used out of the top-10 popular items  = n_unique_soft_non_pop
+ - software use out of the top-10 popular per device = n_unique_soft_per_q_non_pop^[I used camelCase versions of the variables later - latex does not get well with "__" symbols].
+ 
+ 
+I do not completely understand which theoretical constructs they do represent yet, but found them useful in testing differences between profiles later.
+
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+# TODO: move this calculations to the .R script to get rid of repetitions
+# TODO: populate with other vars after spread
+# vars1 =
+
+
+
+software_cleaned  %>%
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft = n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q = n(), id = row_number()) %>% ungroup %>%
+  spread(q, n_unique_soft_per_q) %>% 
+  ungroup() %>% dplyr::select(-a, -q)
+
+## Number of software used out of top-10
+
+vars2 = software_cleaned  %>%
+  filter(!(.$a2 %in% (software_aggregated %>% top_n(10, n) %$% a2))) %>% 
+  group_by(RecordNo) %>%
+  mutate(n_unique_soft_non_pop = n()) %>%
+  ungroup() %>%
+  group_by(RecordNo, q) %>%
+  mutate(n_unique_soft_per_q_non_pop = n()) %>%
+  ungroup() %>% dplyr::select(-a, -q)
+
+tmp = inner_join(df_clean, vars2, by = "RecordNo")
+tmp %>% nrow
+tmp1 = inner_join(df_clean, vars1, by = "RecordNo")
+tmp1 %>% nrow
+tmp1 %>% View
+
+#### Stat - Occupation/Profile
+
+## m3 %>%
+##   group_by(profile, Occupation) %>%
+##   tally() %>%
+##   dplyr::mutate(perc_per_profile = n / sum(n) * 100) %>%
+##   ungroup() %>%
+##   dplyr::mutate(perc_total = n / sum(n) * 100) %>% View
+
+
+
+```
+
+
+
+TODO: what I need to do is to consider public/private sector   
+Q19 - do you work in a public/private sector   
+
+
+```{r, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+
+# Here I am excluding timing columns
+
+df_clean %<>%
+  dplyr::select(-c(page_pSC1_timing:tot_time))
+
+# df_clean %>% nrow
+na_vector = apply(df_clean, 2, function(x){
+
+  sum(is.na(x))
+
+})
+
+na_vector[na_vector > 0] # which variables produce most of the NAs
+## df_final = df_clean %>% dplyr::select(
+##                                       names(na_vector[na_vector == 0]),
+##                                       -Occupation_Num, -status, -Occupation_DISCO,
+##                                       -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
+##                                       -c(Q21_1_open, Q22),
+##                                       -c(Q18_1_open, Q18a),
+##                                       -c(comments, Q4, Q5, Q6, Q7))
+
+df_final %>% View
+
+
+
+```
+
+
+
+```{r, include=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
+
+## Reordering variables to make values semi-continuous
+
+## df_final$Q9[df_final$Q9 == 4] = 0
+## df_final$Q10[df_final$Q10 == 4] = 0
+## df_final$Q11[df_final$Q11 == 4] = 0
+## df_final$Q12[df_final$Q12 == 4] = 0
+## df_final$Q13[df_final$Q13 == 4] = 0
+## df_final$Q14[df_final$Q14 == 4] = 0
+## df_final$Q15[df_final$Q15 == 4] = 0
+## df_final$Q16[df_final$Q16 == 4] = 0
+
+## df_final$Q17_R = 6 - df_final$Q17
+
+
+```
+
+## Description of items for LPA   
+
+
+```{r, include=TRUE}
+
+
+# df_clean$Q1 %>% as.factor() %>% summary() # only 16 indicated other than Dansk
+# Q1 - language
+
+# Q3_1 - Desktop
+# Q3_2 - Laptop
+# Q3_3 - Tablet
+# Q3_4 - Mobile phone/Smartphone
+#
+
+# Q8_v2_1 - Built-in default settings
+# Q8_v2_2 - Plugins/add-ons/extensions
+# Q8_v2_3 - Script to extend Software
+# Q8_v2_4 - I reprogram
+
+# Traditional Surveys
+# Q9 - Q10 - Q11 - Q12 - Q13 - Q14 - Q15 - Q16 - Q16
+
+# Q17_R - employment status
+
+
+```
+
+
+Latent Profile Analysis is used in social science and educational research. It suits the needs to aggregate reprogrammability items, though, need to check how it will deal with Occupations and SES.
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+
+# Q17 - employment status, using Reversed Ordered Q17_R instead
+
+## vars_to_exclude = c("RecordNo", "weight","Q17",
+##                     "Occupation", "profile_education",
+##                     "profile_age2", "profile_age1",
+##                     "region", "Q1", "gender")
+
+d = df_final
+
+## colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
+
+
+```
+
+Number of profiles to choose - analytically - **less BIC is better**.  
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+
+## fit_output = explore_model_fit(d %>% dplyr::select(colnames_lpa),
+##                                n_profiles_range = 1:6)
+
+# is.na(df_clean$Q85_1_1) %>% sum() 
+df_clean %>% View
+
+d %>% View
+d %>% nrow()
+
+apply(d, 2, FUN = is.na) %>% View
+
+apply(d, 2, FUN = function(x) sum(is.na(x))) %>% View
+
+ttt = d %>% dplyr::select(-Occupation, -region, -Q19)
+
+ttt %>% View
+
+fit_output = explore_model_fit(ttt,
+                               n_profiles_range = 1:6)
+
+
+fit_output %>% knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T) 
+
+```
+
+**Number of profiles to choose - visually**
+
+
+Freed variance - variance might vary across the groups. Constrained variance means that profiles are chosen according to the assumption that variance should be closely the same in all of the profiles. Fixed variance indicates the strength of this assumption, so, variance is less then in case of Constrained Variance.   
+
+In it's turn, covariance indicate the degree of variation for interconnection of variables across profiles. Basic example - income should be equally connected with education across all profiles in case of fixed covariance.   
+
+Two models are plotted:
+
+- Constrained variance, fixed covariance
+- Constrained variance, constrained covariance (+)
+
+Based on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+to_plot = fit_output %>%
+  gather(`Covariance matrix structure`, val, -n_profiles) %>% 
+  mutate(`Covariance matrix structure` = as.factor(`Covariance matrix structure`),
+         val = abs(val)) # this is to make the BIC values positive (to align with more common formula / interpretation of BIC)
+
+
+to_plot$`Covariance matrix structure` = forcats::fct_relevel(to_plot$`Covariance matrix structure`,
+                                                             "Constrained variance, fixed covariance",
+                                                             "Freed variance, fixed covariance",
+                                                             "Constrained variance, constrained covariance",
+                                                             "Freed variance, freed covariance")
+
+# Based on plot, either 3 or 4 profiles should be setted up
+
+ggplot(data = to_plot,
+       aes(x = n_profiles, y = val, color = `Covariance matrix structure`, group = `Covariance matrix structure`)) +
+  geom_line() + geom_point() + ylab("BIC (smaller value is better)") # + theme_ipsum_rc()
+
+
+```
+
+Choosing the model with 5 profiles.
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+## SOLVED: exclude binary variables from LPA
+
+m3 = estimate_profiles(d,
+                       colnames_lpa,
+                       n_profiles = 5, 
+                       model = 2,
+                       return_orig_df = T)
+
+
+```
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
+
+## Plotting 
+# RColorBrewer::brewer.pal(n, pal)
+# https://www.r-bloggers.com/how-to-expand-color-palette-with-ggplot-and-rcolorbrewer/
+
+## plot_profiles(m3[, !(colnames(m3) %in% vars_to_exclude)])
+
+
+```
+
+# Plotting   
+
+
+```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE, fig.cap = "Reprogrammability Items Across Profiles: Will make a bit more sense later in conjunction with Occupations", dev='png', fig.width=14, fig.height=12}
+
+
+## m3 = estimate_profiles(d,
+##                        colnames_lpa,
+##                        n_profiles = , 
+##                        model = 2,
+##                        return_orig_df = T)
+
+
+q8_plot = plot_profiles(m3[, c("Q8_v2_1", "Q8_v2_2", "Q8_v2_3", "Q8_v2_4", "profile", "posterior_prob")])
+
+q8_plot
+
+## ggsave(device="png", plot=q8_plot, filename="./plots/q8_plot.png", scale=.2, height = 1024, width = 1024, units = "mm")
+
+
+```

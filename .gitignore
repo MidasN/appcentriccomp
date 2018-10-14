@@ -5,5 +5,5 @@ reports/
 data_transform_meta/
 !reports/.*.pdf
 .Rhistory
-.emacs.desktop.*
+.emacs.desktop
 .projectile
