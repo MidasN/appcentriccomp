@@ -40,21 +40,20 @@ source("./functions.R")
 ```{r}
 
 
-Q85_1_1_Q85_1_5
-Q85_2_1_Q85_2_5
-Q85_3_1_Q85_3_5
-Q85_4_1_Q85_4_5
+## Q85_1_1_Q85_1_5
+## Q85_2_1_Q85_2_5
+## Q85_3_1_Q85_3_5
+## Q85_4_1_Q85_4_5
 
 
-Q17 - employment status # intention to work
+# Q17 - employment status # intention to work
 # df_clean$Q17 %>% summary()
 
 df_clean$Q17_R = 6 - df_clean$Q17
 
 
-Q18 - job title # use Occupation instead
+# Q18 - job title # use Occupation instead
 df_clean$Q18 %>% summary()
-
 df_clean$Occupation %>% unique()
 # TODO: make occupations binary
 
@@ -79,17 +78,17 @@ df_clean$Q19[is.na(df_clean$Q19)] = "Not_Indicated"
 #df_clean$Q19 %>% as.factor() %>% summary()
 
 
-Q20 - industry
-df_clean$Q20 %>% summary()
-# TODO: Q20 - decrease number of level
+# Q20 - industry
+# df_clean$Q20 %>% summary()
 
+# TODO: Q20 - decrease number of level
 # Q22 - not include, but check
 
 df_clean$gender[df_clean$gender == 1] = "w"
 df_clean$gender[df_clean$gender == 2] = "m"
 
 
-df_clean$profile_age1
+# df_clean$profile_age1
 
 df_clean$region[df_clean$region == 1] = "Hovedstaden"
 df_clean$region[df_clean$region == 2] = "Sjælland"
@@ -137,19 +136,19 @@ I do not completely understand which theoretical constructs they do represent ye
 ```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 
 # TODO: move this calculations to the .R script to get rid of repetitions
-# TODO: populate with other vars after spread
-# vars1 =
+# SOLVED: populate with other vars after spread
 
-
-
-software_cleaned  %>%
+vars1 = software_cleaned  %>%
   group_by(RecordNo) %>%
   mutate(n_unique_soft = n()) %>%
   ungroup() %>%
   group_by(RecordNo, q) %>%
-  mutate(n_unique_soft_per_q = n(), id = row_number()) %>% ungroup %>%
-  spread(q, n_unique_soft_per_q) %>% 
-  ungroup() %>% dplyr::select(-a, -q)
+  mutate(n_unique_soft_per_q = n()) %>% mutate(id = row_number()) %>% filter(row_number() == 1) %>%
+  spread(q, n_unique_soft_per_q, fill = 0) %>%
+  mutate_at(vars(Q4:Q7), funs("n_unique_soft_per" = sum(.))) %>%
+  select(-id, -c(Q4:Q7), -c(a,a2)) %>% filter(row_number() == 1) %>% 
+  arrange(RecordNo)
+
 
 ## Number of software used out of top-10
 
@@ -159,14 +158,12 @@ vars2 = software_cleaned  %>%
   mutate(n_unique_soft_non_pop = n()) %>%
   ungroup() %>%
   group_by(RecordNo, q) %>%
-  mutate(n_unique_soft_per_q_non_pop = n()) %>%
-  ungroup() %>% dplyr::select(-a, -q)
+  mutate(n_unique_soft_per_q_non_pop = n()) %>% mutate(id = row_number()) %>% filter(row_number() == 1) %>%
+  spread(q, n_unique_soft_per_q_non_pop, fill = 0) %>%
+  mutate_at(vars(Q4:Q7), funs("n_unique_soft_per_q_non_pop" = sum(.))) %>%
+  select(-id, -c(Q4:Q7), -c(a,a2)) %>% filter(row_number() == 1) %>% 
+  arrange(RecordNo)
 
-tmp = inner_join(df_clean, vars2, by = "RecordNo")
-tmp %>% nrow
-tmp1 = inner_join(df_clean, vars1, by = "RecordNo")
-tmp1 %>% nrow
-tmp1 %>% View
 
 #### Stat - Occupation/Profile
 
@@ -178,108 +175,27 @@ tmp1 %>% View
 ##   dplyr::mutate(perc_total = n / sum(n) * 100) %>% View
 
 
-
 ```
 
-
-
-TODO: what I need to do is to consider public/private sector   
-Q19 - do you work in a public/private sector   
-
-
-```{r, include=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
-
-# Here I am excluding timing columns
-
-df_clean %<>%
-  dplyr::select(-c(page_pSC1_timing:tot_time))
-
-# df_clean %>% nrow
-na_vector = apply(df_clean, 2, function(x){
-
-  sum(is.na(x))
-
-})
-
-na_vector[na_vector > 0] # which variables produce most of the NAs
-## df_final = df_clean %>% dplyr::select(
-##                                       names(na_vector[na_vector == 0]),
-##                                       -Occupation_Num, -status, -Occupation_DISCO,
-##                                       -c(Q85a_1_1, Q85a_2_1, Q85a_3_1, Q85a_4_1),
-##                                       -c(Q21_1_open, Q22),
-##                                       -c(Q18_1_open, Q18a),
-##                                       -c(comments, Q4, Q5, Q6, Q7))
-
-df_final %>% View
-
-
-
-```
-
-
-
-```{r, include=TRUE, warning=FALSE, message=FALSE, echo=FALSE}
-
-## Reordering variables to make values semi-continuous
-
-## df_final$Q9[df_final$Q9 == 4] = 0
-## df_final$Q10[df_final$Q10 == 4] = 0
-## df_final$Q11[df_final$Q11 == 4] = 0
-## df_final$Q12[df_final$Q12 == 4] = 0
-## df_final$Q13[df_final$Q13 == 4] = 0
-## df_final$Q14[df_final$Q14 == 4] = 0
-## df_final$Q15[df_final$Q15 == 4] = 0
-## df_final$Q16[df_final$Q16 == 4] = 0
-
-## df_final$Q17_R = 6 - df_final$Q17
-
-
-```
-
-## Description of items for LPA   
-
-
-```{r, include=TRUE}
-
-
-# df_clean$Q1 %>% as.factor() %>% summary() # only 16 indicated other than Dansk
-# Q1 - language
-
-# Q3_1 - Desktop
-# Q3_2 - Laptop
-# Q3_3 - Tablet
-# Q3_4 - Mobile phone/Smartphone
-#
-
-# Q8_v2_1 - Built-in default settings
-# Q8_v2_2 - Plugins/add-ons/extensions
-# Q8_v2_3 - Script to extend Software
-# Q8_v2_4 - I reprogram
-
-# Traditional Surveys
-# Q9 - Q10 - Q11 - Q12 - Q13 - Q14 - Q15 - Q16 - Q16
-
-# Q17_R - employment status
-
-
-```
-
+Joining information about the number of soft. pieces leads to **688** respondents in total for LPA.    
 
 Latent Profile Analysis is used in social science and educational research. It suits the needs to aggregate reprogrammability items, though, need to check how it will deal with Occupations and SES.
 
 
 ```{r, include=FALSE, message=FALSE, warning=FALSE, echo=FALSE}
 
-# Q17 - employment status, using Reversed Ordered Q17_R instead
-
-## vars_to_exclude = c("RecordNo", "weight","Q17",
-##                     "Occupation", "profile_education",
-##                     "profile_age2", "profile_age1",
-##                     "region", "Q1", "gender")
-
 d = df_final
 
-## colnames_lpa = colnames(d)[!(colnames(d) %in% vars_to_exclude)]
+d = inner_join(df_final, vars2, by = "RecordNo")
+## tmp %>% nrow
+
+d = inner_join(d, vars1, by = "RecordNo")
+## tmp1 %>% nrow
+
+
+
+## inner_join(tmp, tmp1, by = "RecordNo") %>% nrow
+# d %>% nrow
 
 
 ```
@@ -288,28 +204,52 @@ Number of profiles to choose - analytically - **less BIC is better**.
 
 ```{r, message=FALSE, warning=FALSE, echo=FALSE}
 
-## fit_output = explore_model_fit(d %>% dplyr::select(colnames_lpa),
-##                                n_profiles_range = 1:6)
 
-# is.na(df_clean$Q85_1_1) %>% sum() 
-df_clean %>% View
+d %<>% zap_labels %>% 
+       mutate(yesno = 1) %>%
+       distinct %>% 
+       spread(gender, yesno, fill = 0)
 
-d %>% View
-d %>% nrow()
 
-apply(d, 2, FUN = is.na) %>% View
+d %<>% zap_labels %>% 
+       mutate(yesno = 1) %>%
+       distinct %>%
+       spread(Q19, yesno, fill = 0)
 
-apply(d, 2, FUN = function(x) sum(is.na(x))) %>% View
 
-ttt = d %>% dplyr::select(-Occupation, -region, -Q19)
+d %<>% zap_labels %>% 
+       mutate(yesno = 1) %>%
+       distinct %>%
+       spread(region, yesno, fill = 0)
+
+d %<>% zap_labels %>% 
+       mutate(yesno = 1) %>%
+       distinct %>%
+       spread(Occupation, yesno, fill = 0) 
+
+
+
+
+ttt = d 
+
+d$device_category %>% summary()
+
+ttt %>% colnames()
+## ttt$Hovedstaden
+
+fit_output = explore_model_fit(ttt %>% select(-c(RecordNo),
+                                              ## -c(device_category),
+                                              -c(n_unique_soft_non_pop,
+                                                 Q4_n_unique_soft_per_q_non_pop:Q7_n_unique_soft_per_q_non_pop),
+                                              -c(Q4_n_unique_soft_per:Q7_n_unique_soft_per),
+                                              -c(Hovedstaden:Syddanmark),
+                                              -c(`General management`:Teaching)),
+                                              n_profiles_range = 1:5)
+
 
 ttt %>% View
 
-fit_output = explore_model_fit(ttt,
-                               n_profiles_range = 1:6)
-
-
-fit_output %>% knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T) 
+# fit_output %>% knitr::kable(digits = 2) %>% kable_styling(bootstrap_options = "striped", full_width = T) 
 
 ```
 
@@ -325,9 +265,12 @@ Two models are plotted:
 - Constrained variance, fixed covariance
 - Constrained variance, constrained covariance (+)
 
-Based on the BIC, we should choose EEE = Constrained variance, constrained covariance model = model 2.
+Based on the BIC, we should choose model 1.
 
 ```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
+
+
+# compare_solutions(ttt, ttt %>% )
 
 to_plot = fit_output %>%
   gather(`Covariance matrix structure`, val, -n_profiles) %>% 
@@ -354,12 +297,21 @@ Choosing the model with 5 profiles.
 
 ```{r, include=TRUE, message=FALSE, warning=FALSE, echo=FALSE}
 
+colnames_lpa = colnames(ttt)[-1]
+# ttt %>% View
+
 ## SOLVED: exclude binary variables from LPA
 
+colnames_lpa
+
+d$Hovedstaden
+
 m3 = estimate_profiles(d,
-                       colnames_lpa,
-                       n_profiles = 5, 
-                       model = 2,
+                       d %>% select(-c(RecordNo),
+                                    -c(Hovedstaden:Syddanmark),
+                                    -c(`General management`:Teaching)) %>% colnames(),
+                       n_profiles = 5,
+                       model = 1,
                        return_orig_df = T)
 
 
