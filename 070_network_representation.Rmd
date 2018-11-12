@@ -1,0 +1,105 @@
+---
+title: "3_Network_Rerpresentation"
+mainfont: DejaVu Sans
+output:
+pdf_document:
+latex_engine: xelatex
+keep_tex: true
+html_document: default
+word_document: default
+font-family: Times New Roman
+---
+
+```{r}
+
+source('010_data_preprocessing.R')
+source("./functions.R")
+
+
+library(here)
+library(tidyverse)
+library(magrittr)
+library(tidyLPA)
+
+library(ggplot2)
+library(ggpubr)
+
+library(mclust)
+library(forcats)
+library(hrbrthemes)
+
+library(knitr)
+library(kableExtra)
+
+
+library(igraph)
+
+```
+
+```{r}
+
+jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
+
+merged <- merge(x = software_cleaned[!(software_cleaned$a2 %in% (software_aggregated %>% top_n(9, n) %$% a2)),], # throwing away top 9
+                y = jobtitleanddescription,
+                by = "RecordNo") %>%
+  select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
+
+
+```
+
+The most simple scenario - just assume that there is no difference between devices. Use Respondent Id and Software Title as Ids. 
+
+```{r}
+
+
+merged %>% View
+
+# merged %>% nrow()
+
+graph = igraph::graph.data.frame(merged %>% dplyr::select(RecordNo, a2))
+
+V(graph)
+
+
+# igraph::bipartite()
+
+
+net = merged %>% dplyr::select(RecordNo, a2)
+
+tmp = data.frame(rep("", nrow(net)*2))
+
+tmp$v1[1:nrow(net)] = net$RecordNo
+tmp$v1[(nrow(net)+1):nrow(tmp)] = net$a2
+
+
+no_dubl = tmp$v1[!duplicated(tmp$v1)]
+
+
+g <- make_bipartite_graph( rep(0:1,length=10), c(1:10))
+
+
+
+vertices = data.frame(Id = 1:length(no_dubl), Label = no_dubl)
+
+
+vertices %>% View
+
+edges = net[,1:2]
+
+t(igraph::get.edgelist(g))
+
+tmp = NULL
+
+for(i in 1:ncol(t(igraph::get.edgelist(g)))) {
+  tmp = c(tmp, t(igraph::get.edgelist(g))[,i])
+}
+
+tmp = NULL
+sapply(t(igraph::get.edgelist(g)), FUN = function(x) {
+  tmp = c(tmp, x)
+  return(tmp)
+} )
+
+
+```
