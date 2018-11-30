@@ -73,7 +73,7 @@ software_cleaned <- read_tsv("./data/softwarenames_cleaned.tsv") %>%
 software_cleaned$RecordNo %<>% as.numeric()
 
 
-# Aggregated Numbers
+# Aggregated Values
 
 
 software_aggregated <- software_cleaned %>% # Group and order high to low

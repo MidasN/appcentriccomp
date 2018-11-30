@@ -15,7 +15,6 @@ font-family: Times New Roman
 source('010_data_preprocessing.R')
 source("./functions.R")
 
-
 library(here)
 library(tidyverse)
 library(magrittr)
@@ -31,75 +30,174 @@ library(hrbrthemes)
 library(knitr)
 library(kableExtra)
 
-
 library(igraph)
 
 ```
 
 ```{r}
 
-jobtitleanddescription <- df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
+jobtitleanddescription = df_clean[, c("RecordNo", "Q18_1_open", "Q18a", "Occupation_DISCO", "Occupation")]
 
-merged <- merge(x = software_cleaned[!(software_cleaned$a2 %in% (software_aggregated %>% top_n(9, n) %$% a2)),], # throwing away top 9
+merged = merge(x = software_cleaned[!(software_cleaned$a2 %in% (software_aggregated %>% top_n(9, n) %$% a2)),], # throwing away top 9
                 y = jobtitleanddescription,
                 by = "RecordNo") %>%
   select(-a, -Q18_1_open, -Q18a, -Occupation_DISCO)
 
+## merged %>% View
+
 
 ```
+
+
+grouping devices per software for Software Projection
+
+```{r}
+
+# merged %>% group_by(a2, )
+
+
+merged = merged %>%
+  mutate(id = 1:nrow(merged)) %>% 
+  group_by(a2, q) %>%
+  mutate(QuantPerDevice = n()) %>% 
+  spread(key = q, value = QuantPerDevice, fill = 0) %>% select(-id) %>%
+  ungroup() %>% group_by(a2) %>% 
+  mutate(stationaryQuantity = sum(Q4), # feature: quantity, software on desktop/laptop
+         mobileQuantitiy = sum(Q5 + Q6), # feature: quantity, software on mobile/laptop devices
+         cloudnessQuantity = sum(Q7)) %>% # feature: quantity, software is used on the web (cloud)
+  select(-c(Q4, Q5,Q6, Q7))
+
+merged$mobileBinary = ifelse(merged$mobileQuantitiy > 1, 1, 0) # feaure: whether software is principally used on several devices
+merged$cloudnessBinary  = ifelse(merged$cloudnessQuantity > 1, 1, 0) # feature: whether software is principally possess web version
+
+```
+
+grouping device-based items and questionnaire items for Respondent's Projection
+
+```{r}
+
+
+
+```
+
+
 
 The most simple scenario - just assume that there is no difference between devices. Use Respondent Id and Software Title as Ids. 
 
 ```{r}
 
+g = graph.empty()
 
-merged %>% View
-
-# merged %>% nrow()
-
-graph = igraph::graph.data.frame(merged %>% dplyr::select(RecordNo, a2))
-
-V(graph)
-
-
-# igraph::bipartite()
+## TODO: fefactor assinging node and edge variables without unique repetition
+## SOLVED: TRUE is for respondents, FALSE for software
+g = add.vertices(g, nv = length(merged$RecordNo %>% unique()),
+                 attr = list(name = paste0("A", merged$RecordNo %>% unique()),
+                             occupation = merged[!duplicated(merged$RecordNo),]$Occupation,
+                             type = rep(TRUE, length(merged$RecordNo %>% unique()))))
 
 
-net = merged %>% dplyr::select(RecordNo, a2)
+## SOLVED: checking order of names and attributes
+## merged$a2 %>% unique()  %>% tail()
+## merged[!duplicated(merged$a2),]$a2 %>% tail()
 
-tmp = data.frame(rep("", nrow(net)*2))
-
-tmp$v1[1:nrow(net)] = net$RecordNo
-tmp$v1[(nrow(net)+1):nrow(tmp)] = net$a2
-
-
-no_dubl = tmp$v1[!duplicated(tmp$v1)]
-
-
-g <- make_bipartite_graph( rep(0:1,length=10), c(1:10))
-
-
-
-vertices = data.frame(Id = 1:length(no_dubl), Label = no_dubl)
+g = add.vertices(g, nv = length(merged$a2 %>% unique()),
+                 attr = list(name = paste0("B", merged$a2 %>% unique()),
+                             mobileBinary = merged[!duplicated(merged$a2),]$mobileBinary, ## assigning mobileBinary variable
+                             cloudnessBinary = merged[!duplicated(merged$a2),]$cloudnessBinary,
+                             stationaryQuantity = merged[!duplicated(merged$a2),]$stationaryQuantity,
+                             mobileQuantity = merged[!duplicated(merged$a2),]$mobileQuantitiy,
+                             cloudnessQuantity = merged[!duplicated(merged$a2),]$cloudnessQuantity,
+                             type = rep(FALSE, length(merged$a2 %>% unique()))))
 
 
-vertices %>% View
+# we need to turn edgeList into a vector (and using names instead of indexes)
+edgeListVec = as.vector(t(as.matrix(data.frame(S1 = paste0("A", merged$RecordNo),
+                                               S2 = paste0("B", merged$a2)))))
 
-edges = net[,1:2]
+g = add.edges(g, edgeListVec)
 
-t(igraph::get.edgelist(g))
+## is.bipartite(g)
 
-tmp = NULL
+```
 
-for(i in 1:ncol(t(igraph::get.edgelist(g)))) {
-  tmp = c(tmp, t(igraph::get.edgelist(g))[,i])
-}
+Inspecting Software Projection, checking hypothesises
 
-tmp = NULL
-sapply(t(igraph::get.edgelist(g)), FUN = function(x) {
-  tmp = c(tmp, x)
-  return(tmp)
-} )
+```{r}
 
+proj = bipartite_projection(g)[[1]]
+
+## INFO: 1 means zero - absence of feature, 2 - presence of feature
+## types might be integers starting with 1, not obvious
+
+V(proj)$mobileBinary[V(proj)$mobileBinary == 1] = 2
+V(proj)$mobileBinary[V(proj)$mobileBinary == 0] = 1
+
+
+V(proj)$cloudnessBinary[V(proj)$cloudnessBinary == 1] = 2
+V(proj)$cloudnessBinary[V(proj)$cloudnessBinary == 0] = 1
+
+## V(proj)$cloudnessBinary %>% as.factor() %>% summary()
+## V(proj)$mobileBinary %>% as.factor() %>% summary()
+
+assortativity.nominal(proj, types = V(proj)$mobileBinary)
+
+
+## V(proj)$mobileBinary %>% hist()
+## V(proj)$cloudnessBinary %>% hist()
+
+assortativity.nominal(proj, types = V(proj)$cloudnessBinary)
+
+## assort numeric
+assortativity(proj, V(proj)$stationaryQuantity)
+## FIXME: assortativity(proj, V(proj)$mobileQuantity)
+
+assortativity(proj, V(proj)$cloudnessQuantity)
+
+```
+
+Inspecting Respondents Network
+
+```{r}
+
+proj = bipartite_projection(g)[[2]]
+
+## INFO: 1 means zero - absence of feature, 2 - presence of feature
+## types might be integers starting with 1, not obvious
+
+V(proj)$occupation %>% unique()
+
+tmp = 0
+sapply(V(proj)$occupation %>% unique(), simplify = FALSE, USE.NAMES = FALSE,  function(x) {
+  tmp <<- tmp + 1
+  V(proj)$occupation[V(proj)$occupation == x] <<- tmp
+})
+
+V(proj)$occupation = as.integer(as.character(V(proj)$occupation))
+V(proj)$occupation %>% class()
+
+x = "Teaching"
+tmp = 1
+V(proj)$occupation[V(proj)$occupation == x] <- tmp
+
+recode(V(proj)$occupation, "c(1,2,3,4,5)='Five or Less'")
+
+V(proj)$mobileBinary[V(proj)$mobileBinary == 1] = 2
+V(proj)$mobileBinary[V(proj)$mobileBinary == 0] = 1
+
+## V(proj)$cloudnessBinary[V(proj)$cloudnessBinary == 1] = 2
+## V(proj)$cloudnessBinary[V(proj)$cloudnessBinary == 0] = 1
+
+assortativity.nominal(proj, types = V(proj)$occupation)
+
+
+```
+
+
+
+Exporting to Networkx
+
+```{r}
+
+write.graph(g, file = here("data/biGraph.graphml"), format = "graphml")
 
 ```
